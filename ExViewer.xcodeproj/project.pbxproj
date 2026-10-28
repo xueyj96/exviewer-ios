@@ -219,7 +219,7 @@ A15BAE29D077123B12BD5DB3 = {isa = PBXGroup; path = UnitTests; sourceTree = "<gro
     INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-    CURRENT_PROJECT_VERSION = 21; MARKETING_VERSION = 0.1.0;
+    CURRENT_PROJECT_VERSION = 22; MARKETING_VERSION = 0.1.0;
     TARGETED_DEVICE_FAMILY = "1,2"; CODE_SIGN_STYLE = Automatic;
     "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
     "CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = YES;
@@ -238,7 +238,7 @@ E2D3A31BEAA1368FC62DA77A = {isa = XCBuildConfiguration; name = Release; buildSet
     INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-    CURRENT_PROJECT_VERSION = 21; MARKETING_VERSION = 0.1.0;
+    CURRENT_PROJECT_VERSION = 22; MARKETING_VERSION = 0.1.0;
     TARGETED_DEVICE_FAMILY = "1,2"; CODE_SIGN_STYLE = Automatic;
     "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
     "CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = YES;

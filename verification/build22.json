@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-28T11:42:54.488955+00:00",
+  "app_version": "0.1.0",
+  "build": "22",
+  "runtime_source_sha256": "c3cb16b4423c6c4e58283f140207819affcfa180e70ed580c6d4399c3e27f4a5",
+  "runtime_digest_definition": "SHA256 of sorted App/ and Core/Sources/ paths, each path + NUL + fileSHA256 + newline",
+  "change": "Discovery feed right-swipe back and left-swipe forward, bounded cached history and scroll restoration",
+  "focused_native_tests": {
+    "unique_passed": 14,
+    "failed": 0,
+    "suites": [
+      "DiscoveryNavigationTests",
+      "GalleryPagerTests"
+    ]
+  },
+  "focused_UI_tests": {
+    "unique_passed": 4,
+    "failed": 0,
+    "cases": [
+      "ExViewerUITests.ChromeV17UITests.testBrowseSwipeBackForwardAndNewSearchBranch",
+      "ExViewerUITests.ChromeV17UITests.testBrowseSwipeLeavesVerticalScrollAndHeaderChipsUsable",
+      "ExViewerUITests.ChromeV17UITests.testReturningToScrolledFeedRestoresCardBelowFloatingHeader",
+      "ExViewerUITests.FlatChromeV19UITests.testFlatBackKeepsInteractivePopAndCanBeReentered"
+    ]
+  },
+  "runs": [
+    {
+      "scope": "Initial complete history regression",
+      "cases": [
+        "ExViewerTests.DiscoveryNavigationTests.testBackAndForwardKeepEntryObjectsLoadedPagesAndAnchors",
+        "ExViewerTests.DiscoveryNavigationTests.testCancelledQAPaginationCannotAppendAfterSubmittingAnotherEntry",
+        "ExViewerTests.DiscoveryNavigationTests.testCombinedBackForwardTrailStaysBounded",
+        "ExViewerTests.DiscoveryNavigationTests.testExplicitNavigationReusesForwardEntryBeforeDiscardingBranch",
+        "ExViewerTests.DiscoveryNavigationTests.testHistorySwipeRequiresHorizontalIntentAndAvailableDestination",
+        "ExViewerTests.DiscoveryNavigationTests.testInvalidQueryDoesNotChangeCurrentEntryOrHistory",
+        "ExViewerTests.DiscoveryNavigationTests.testLatestAndPopularReuseTheirOwnPagedEntriesAndAnchors",
+        "ExViewerTests.DiscoveryNavigationTests.testOnlyValidNewNavigationDiscardsForwardBranch",
+        "ExViewerTests.DiscoveryNavigationTests.testPagedEntriesRestoreItemsCursorAndAnchorAcrossBackNavigation",
+        "ExViewerTests.GalleryPagerTests.testFirstCompletedBatchAppearsBeforeLaterBatchesWithoutChangingCoverage",
+        "ExViewerTests.GalleryPagerTests.testInterruptedIncompleteBatchCanRecoverTagsOnRetryWithoutDuplicates",
+        "ExViewerTests.GalleryPagerTests.testMetadataFailurePreservesIncompleteRowsAndBlockedUnknownPolicy",
+        "ExViewerTests.GalleryPagerTests.testResetDuringMetadataCannotAppendOldSourceAfterNewSource",
+        "ExViewerUITests.ChromeV17UITests.testBrowseSwipeBackForwardAndNewSearchBranch",
+        "ExViewerUITests.ChromeV17UITests.testBrowseSwipeLeavesVerticalScrollAndHeaderChipsUsable",
+        "ExViewerUITests.ChromeV17UITests.testReturningToScrolledFeedRestoresCardBelowFloatingHeader",
+        "ExViewerUITests.FlatChromeV19UITests.testFlatBackKeepsInteractivePopAndCanBeReentered"
+      ],
+      "passed": 17,
+      "failed": 0,
+      "local_evidence": "QA/Simulator-20261028T113441Z-test.log"
+    },
+    {
+      "scope": "Final visitor initialization guard and affected paths",
+      "cases": [
+        "ExViewerTests.DiscoveryNavigationTests.testBackAndForwardKeepEntryObjectsLoadedPagesAndAnchors",
+        "ExViewerTests.DiscoveryNavigationTests.testCancelledQAPaginationCannotAppendAfterSubmittingAnotherEntry",
+        "ExViewerTests.DiscoveryNavigationTests.testCombinedBackForwardTrailStaysBounded",
+        "ExViewerTests.DiscoveryNavigationTests.testExplicitNavigationReusesForwardEntryBeforeDiscardingBranch",
+        "ExViewerTests.DiscoveryNavigationTests.testHistorySwipeRequiresHorizontalIntentAndAvailableDestination",
+        "ExViewerTests.DiscoveryNavigationTests.testInvalidQueryDoesNotChangeCurrentEntryOrHistory",
+        "ExViewerTests.DiscoveryNavigationTests.testLatestAndPopularReuseTheirOwnPagedEntriesAndAnchors",
+        "ExViewerTests.DiscoveryNavigationTests.testOnlyValidNewNavigationDiscardsForwardBranch",
+        "ExViewerTests.DiscoveryNavigationTests.testPagedEntriesRestoreItemsCursorAndAnchorAcrossBackNavigation",
+        "ExViewerTests.DiscoveryNavigationTests.testUnstartedVisitorEntryCanStartWhenRestoredFromHistory",
+        "ExViewerUITests.ChromeV17UITests.testBrowseSwipeBackForwardAndNewSearchBranch",
+        "ExViewerUITests.ChromeV17UITests.testReturningToScrolledFeedRestoresCardBelowFloatingHeader"
+      ],
+      "passed": 12,
+      "failed": 0,
+      "local_evidence": "QA/Simulator-20261028T113853Z-test.log"
+    }
+  ],
+  "verification_binding": "The final visitor-root guard reran all10navigation tests plus both affected swipe/scroll-restoration UI cases; pager logic,header conflict handling,and native detail pop were unchanged from the first successful run.",
+  "release_build": "PASSED",
+  "history_scope": "In-memory discovery/search feed history,combined back and forward limit32; excludes reader page turns and header horizontal controls",
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_site_account_acceptance": "NOT_EXERCISED",
+  "public_IPA_requires_personal_re_signing": true
+}

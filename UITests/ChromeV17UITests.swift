@@ -1,6 +1,68 @@
 import XCTest
 
 final class ChromeV17UITests: XCTestCase {
+    private func submitHistorySearch(_ app: XCUIApplication, _ text: String) {
+        app.buttons["discover.search-entry"].tap()
+        let input = app.textFields["compose.text"]
+        XCTAssertTrue(input.waitForExistence(timeout: 6))
+        input.tap()
+        if let old = input.value as? String, !old.isEmpty, old != input.placeholderValue {
+            // Short keyword edits start with the caret at the end when tapping
+            // the empty portion of the field; remove the previous draft first.
+            input.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        }
+        input.typeText(text)
+        app.buttons["compose.apply"].tap()
+    }
+
+    private func historySwipe(_ app: XCUIApplication, right: Bool) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: right ? 0.2 : 0.8, dy: 0.62))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: right ? 0.8 : 0.2, dy: 0.62))
+        start.press(forDuration: 0.04, thenDragTo: end, withVelocity: .default, thenHoldForDuration: 0.08)
+    }
+
+    func testBrowseSwipeBackForwardAndNewSearchBranch() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        submitHistorySearch(app, "coast")
+        XCTAssertTrue(app.staticTexts["已执行：EX · coast"].waitForExistence(timeout: 6))
+        submitHistorySearch(app, "mountain")
+        XCTAssertTrue(app.staticTexts["已执行：EX · mountain"].waitForExistence(timeout: 6))
+        historySwipe(app, right: true)
+        XCTAssertTrue(app.staticTexts["已执行：EX · coast"].waitForExistence(timeout: 6))
+        historySwipe(app, right: false)
+        XCTAssertTrue(app.staticTexts["已执行：EX · mountain"].waitForExistence(timeout: 6))
+        historySwipe(app, right: true)
+        XCTAssertTrue(app.staticTexts["已执行：EX · coast"].waitForExistence(timeout: 6))
+        submitHistorySearch(app, "forest")
+        XCTAssertTrue(app.staticTexts["已执行：EX · forest"].waitForExistence(timeout: 6))
+        historySwipe(app, right: false)
+        XCTAssertTrue(app.staticTexts["已执行：EX · forest"].exists)
+    }
+
+    func testBrowseSwipeLeavesVerticalScrollAndHeaderChipsUsable() {
+        continueAfterFailure = false
+        let app = launch(["--qa-feed-paging"])
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        submitHistorySearch(app, "language:english other:landscape ~artist:sample")
+        let summary = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "已执行：")).firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 6))
+        let original = summary.label
+        let chips = app.scrollViews["discover.rule-chips"]
+        XCTAssertTrue(chips.waitForExistence(timeout: 4))
+        chips.swipeRight()
+        XCTAssertEqual(summary.label, original)
+        app.swipeUp()
+        XCTAssertEqual(summary.label, original)
+        let card = app.buttons["gallery.open.205"]
+        for _ in 0..<8 { if card.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(card.isHittable, "Vertical feed scrolling must remain available")
+        card.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail.actions"].firstMatch.waitForExistence(timeout: 6))
+    }
+
     private func launch(_ arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--qa"] + arguments
@@ -158,9 +220,8 @@ final class ChromeV17UITests: XCTestCase {
         XCTAssertTrue(input.waitForExistence(timeout: 6))
         input.tap(); input.typeText("return position")
         app.buttons["compose.apply"].tap()
-        let back = app.buttons["discover.back"]
-        XCTAssertTrue(back.waitForExistence(timeout: 6))
-        back.tap()
+        XCTAssertTrue(app.buttons["discover.back"].waitForExistence(timeout: 6))
+        historySwipe(app, right: true)
 
         let restored = NSPredicate { _, _ in
             guard card.exists, card.isHittable else { return false }

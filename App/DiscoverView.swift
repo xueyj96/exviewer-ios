@@ -50,6 +50,9 @@ struct DiscoverView: View {
                         .id(entry.id)
                         .environmentObject(session)
                         .environmentObject(library)
+                        .modifier(DiscoveryHistoryGesture(topInset: headerHeight,
+                                                         canGoBack: navigation.canGoBack, canGoForward: navigation.canGoForward,
+                                                         onBack: goBack, onForward: goForward))
                 }
             }
         } header: {
@@ -119,6 +122,9 @@ struct DiscoverView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("返回")
                 .accessibilityIdentifier("discover.back")
+                .contextMenu {
+                    if navigation.canGoForward { Button("前进", systemImage: "chevron.right", action: goForward) }
+                }
             }
             Button { pendingEdit = nil; composing = true } label: {
                 HStack(spacing: 9) {
@@ -192,6 +198,7 @@ struct DiscoverView: View {
                 }
             }.padding(.bottom, 2)
         }
+        .accessibilityIdentifier("discover.rule-chips")
     }
 
     private var laneBinding: Binding<Int> {
@@ -266,8 +273,18 @@ struct DiscoverView: View {
 
     private func goBack() {
         guard navigation.back() else { return }
+        resumeHistoryEntry()
+    }
+
+    private func goForward() {
+        guard navigation.forward() else { return }
+        resumeHistoryEntry()
+    }
+
+    private func resumeHistoryEntry() {
         publish(navigation.current)
-        error = nil
+        startCurrent()
+        if entry.pager.interrupted { entry.pager.retry(session: session) }
     }
 
     private func clearConditions() {
@@ -310,6 +327,52 @@ struct DiscoverView: View {
     }
 }
 
+private struct DiscoveryHistoryGesture: ViewModifier {
+    let topInset: CGFloat
+    let canGoBack: Bool
+    let canGoForward: Bool
+    var onBack: () -> Void
+    var onForward: () -> Void
+    @GestureState(resetTransaction: Transaction(animation: .easeOut(duration: 0.18))) private var drag: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle())
+            .simultaneousGesture(DragGesture(minimumDistance: 24, coordinateSpace: .local)
+                .updating($drag) { value, state, _ in
+                    guard value.startLocation.y > topInset,
+                          direction(value.translation) != nil else { return }
+                    state = value.translation.width
+                }
+                .onEnded { value in
+                    guard value.startLocation.y > topInset,
+                          let action = DiscoveryHistorySwipe.committedDirection(
+                            horizontal: Double(value.translation.width), vertical: Double(value.translation.height),
+                            predictedHorizontal: Double(value.predictedEndTranslation.width),
+                            canGoBack: canGoBack, canGoForward: canGoForward) else { return }
+                    if action == .back { onBack() } else { onForward() }
+                })
+            .overlay(alignment: drag >= 0 ? .leading : .trailing) {
+                if drag != 0 {
+                    Image(systemName: drag > 0 ? "chevron.left" : "chevron.right")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 32, height: 32)
+                        .background(FloatingChrome.background, in: Circle())
+                        .padding(.horizontal, 10)
+                        .opacity(Double(min(1, abs(drag) / 72)))
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+            }
+            .accessibilityAction(named: Text("返回上一页")) { if canGoBack { onBack() } }
+            .accessibilityAction(named: Text("前进下一页")) { if canGoForward { onForward() } }
+    }
+
+    private func direction(_ translation: CGSize) -> DiscoveryHistorySwipe.Direction? {
+        DiscoveryHistorySwipe.direction(horizontal: Double(translation.width), vertical: Double(translation.height),
+                                        canGoBack: canGoBack, canGoForward: canGoForward)
+    }
+}
+
 private struct DiscoveryFeedView: View {
     @ObservedObject var entry: DiscoveryEntry
     var topInset: CGFloat
@@ -345,6 +408,7 @@ private struct DiscoveryFeedView: View {
             .padding(.top, topInset)
         }
         .coordinateSpace(name: entry.id.uuidString)
+        .accessibilityIdentifier("discover.feed")
         .refreshable(action: onRefresh)
         .contentMargins(.top, topInset, for: .scrollIndicators)
         .task(id: topInset) {
