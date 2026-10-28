@@ -1,6 +1,86 @@
 import XCTest
 
 final class ChromeV17UITests: XCTestCase {
+    private func openSearchHistory(_ app: XCUIApplication) {
+        let button = app.buttons["compose.search-history"]
+        for _ in 0..<4 { if button.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(button.isHittable)
+        button.tap()
+        XCTAssertTrue(app.navigationBars["搜索记录"].waitForExistence(timeout: 5))
+    }
+
+    private func nameFavorite(_ app: XCUIApplication, _ name: String) {
+        let input = app.textFields["search.save.name"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        if let old = input.value as? String, old != input.placeholderValue {
+            input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        }
+        input.typeText(name)
+        app.buttons["search.save.confirm"].tap()
+    }
+
+    func testRecentSearchLoadsFullTagConditionsAndSavesAsCommon() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        submitHistorySearch(app, "coast language:english -other:city")
+        app.buttons["discover.search-entry"].tap()
+        XCTAssertTrue(app.textFields["compose.text"].waitForExistence(timeout: 5))
+        openSearchHistory(app)
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("coast")); XCTAssertTrue(row.label.contains("language:english")); XCTAssertTrue(row.label.contains("排除"))
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.save.")).firstMatch.tap()
+        nameFavorite(app, "常用海岸")
+        XCTAssertTrue(app.navigationBars["搜索记录"].waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.navigationBars["组合搜索"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["compose.text"].value as? String, "coast")
+        let common = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.favorite.")).firstMatch
+        XCTAssertTrue(common.waitForExistence(timeout: 5)); XCTAssertTrue(common.label.contains("常用海岸"))
+        app.buttons["compose.apply"].tap()
+        let summary = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "已执行：EX · coast")).firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 6)); XCTAssertTrue(summary.label.contains("排除 other:city"))
+        app.buttons["discover.search-entry"].tap(); openSearchHistory(app)
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).count, 1, "Rerunning the same full conditions must update one record")
+    }
+
+    func testCancelDraftDoesNotCreateSearchHistory() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        app.buttons["discover.search-entry"].tap()
+        let input = app.textFields["compose.text"]; XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap(); input.typeText("cancelled draft")
+        app.buttons["compose.cancel"].tap()
+        app.buttons["discover.search-entry"].tap(); openSearchHistory(app)
+        XCTAssertTrue(app.staticTexts["search-history.empty"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).count, 0)
+    }
+
+    func testSaveCurrentDraftAsCommonWithoutExecutingAndClearOnlyHistory() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        app.buttons["discover.search-entry"].tap()
+        let input = app.textFields["compose.text"]; XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap(); input.typeText("forest language:english")
+        app.buttons["compose.save-favorite"].tap()
+        nameFavorite(app, "常用森林")
+        XCTAssertTrue(app.navigationBars["组合搜索"].waitForExistence(timeout: 5))
+        openSearchHistory(app)
+        XCTAssertTrue(app.staticTexts["search-history.empty"].waitForExistence(timeout: 5))
+        app.buttons["search-history.close"].tap()
+        app.buttons["compose.apply"].tap()
+        app.buttons["discover.search-entry"].tap(); openSearchHistory(app)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).firstMatch.waitForExistence(timeout: 5))
+        app.buttons["search-history.clear"].tap(); app.buttons["清空搜索记录"].tap()
+        XCTAssertTrue(app.staticTexts["search-history.empty"].waitForExistence(timeout: 5))
+        app.buttons["search-history.close"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.favorite.")).firstMatch.label.contains("常用森林"))
+    }
+
     private func submitHistorySearch(_ app: XCUIApplication, _ text: String) {
         app.buttons["discover.search-entry"].tap()
         let input = app.textFields["compose.text"]

@@ -3,6 +3,114 @@ import ExViewerCore
 @testable import ExViewer
 
 final class ExViewerStorageTests: XCTestCase {
+    private func historyRoot() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("SearchHistoryTest-" + UUID().uuidString)
+    }
+
+    @MainActor func testRecentSearchRoundTripPreservesLegacyLibraryAndManualFiles() throws {
+        let root = historyRoot(); defer { try? FileManager.default.removeItem(at: root) }
+        let library = LibraryStore(qa: true, storageRoot: root)
+        var query = SearchQuery(); query.text = "coast"; query.titleOnly = true; query.artist = "Sample Artist"
+        query.rules = [.init(tag: .init(namespace: "language", name: "English")), .init(tag: .init(namespace: "other", name: "city"), match: .exclude)]
+        query.excludedCategories = [1, 32]; query.minRating = 4; query.minPages = 24; query.maxPages = 400; query.requireTorrent = true
+        var legacy = LibrarySnapshot()
+        legacy.saved = [.init(name: "Existing common", site: .ex, query: query)]
+        legacy.favoriteTags = [.init(namespace: "language", name: "english")]
+        legacy.blockedTags = [.init(namespace: "other", name: "city")]
+        legacy.bookmarks = [QASamples.galleries[0]]
+        let legacyData = try JSONEncoder().encode(legacy)
+        let file = library.directory.appendingPathComponent("library.json")
+        try legacyData.write(to: file)
+        let manual = library.directory.appendingPathComponent("Offline/retained/page.media")
+        try FileManager.default.createDirectory(at: manual.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let manualData = Data("retained manual fixture".utf8); try manualData.write(to: manual)
+        library.load(owner: "guest")
+        XCTAssertTrue(library.recordSearch(query: query, site: .eh))
+        XCTAssertEqual(try Data(contentsOf: file), legacyData, "Recent searches must not rewrite or migrate the original library")
+        let reopened = LibraryStore(qa: true, storageRoot: root)
+        XCTAssertNil(reopened.error); XCTAssertNil(reopened.searchHistoryError)
+        XCTAssertEqual(reopened.recentSearches.count, 1)
+        XCTAssertEqual(reopened.recentSearches.first?.query, query)
+        XCTAssertEqual(reopened.recentSearches.first?.site, .eh)
+        XCTAssertEqual(reopened.snapshot.saved.first?.name, "Existing common")
+        XCTAssertEqual(reopened.snapshot.bookmarks.count, 1)
+        XCTAssertEqual(try Data(contentsOf: manual), manualData)
+        XCTAssertTrue(reopened.clearSearchHistory())
+        XCTAssertEqual(try Data(contentsOf: file), legacyData)
+        XCTAssertEqual(try Data(contentsOf: manual), manualData)
+    }
+
+    @MainActor func testRecentSearchDeduplicationUsesAllConditionsAndSite() throws {
+        let root = historyRoot(); defer { try? FileManager.default.removeItem(at: root) }
+        let library = LibraryStore(qa: true, storageRoot: root)
+        var query = SearchQuery(); query.text = "coast"
+        query.rules = [.init(tag: .init(namespace: "language", name: "ENGLISH")), .init(tag: .init(namespace: "other", name: "city"), match: .exclude)]
+        XCTAssertTrue(library.recordSearch(query: query, site: .ex)); let id = library.recentSearches[0].id
+        var equivalent = query; equivalent.rules.reverse(); equivalent.rules[1].tag.name = "english"
+        XCTAssertTrue(library.recordSearch(query: equivalent, site: .ex))
+        XCTAssertEqual(library.recentSearches.count, 1); XCTAssertEqual(library.recentSearches[0].id, id)
+        var rated = query; rated.minRating = 4
+        XCTAssertTrue(library.recordSearch(query: rated, site: .ex))
+        XCTAssertTrue(library.recordSearch(query: query, site: .eh))
+        XCTAssertEqual(library.recentSearches.count, 3)
+        XCTAssertEqual(library.recentSearches[0].site, .eh)
+        XCTAssertEqual(library.recentSearches[1].query.minRating, 4)
+        let savedID = try XCTUnwrap(library.saveSearch(name: "Full conditions", site: .eh, query: query))
+        XCTAssertEqual(library.savedSearch(matching: equivalent, site: .eh)?.id, savedID)
+        XCTAssertEqual(library.snapshot.saved[0].query, query)
+        XCTAssertTrue(library.deleteRecentSearch(library.recentSearches[0].id))
+        XCTAssertEqual(library.snapshot.saved.count, 1)
+    }
+
+    @MainActor func testSearchHistoryIsBoundedAndSeparatedByAccount() {
+        let root = historyRoot(); defer { try? FileManager.default.removeItem(at: root) }
+        let library = LibraryStore(qa: true, storageRoot: root)
+        XCTAssertFalse(library.recordSearch(query: SearchQuery(), site: .ex))
+        var invalid = SearchQuery(); invalid.text = String(repeating: "x", count: 250)
+        XCTAssertFalse(library.recordSearch(query: invalid, site: .ex))
+        for i in 0..<105 { var query = SearchQuery(); query.text = "search \(i)"; XCTAssertTrue(library.recordSearch(query: query, site: .ex)) }
+        XCTAssertEqual(library.recentSearches.count, LibraryStore.searchHistoryLimit)
+        XCTAssertEqual(library.recentSearches.first?.query.text, "search 104")
+        library.load(owner: "abcdef")
+        XCTAssertTrue(library.recentSearches.isEmpty)
+        var other = SearchQuery(); other.text = "other account"
+        XCTAssertTrue(library.recordSearch(query: other, site: .eh))
+        library.load(owner: "guest")
+        XCTAssertEqual(library.recentSearches.count, LibraryStore.searchHistoryLimit)
+        XCTAssertEqual(library.recentSearches.first?.query.text, "search 104")
+    }
+
+    @MainActor func testCorruptSearchHistoryIsPreservedWithoutBlockingFavorites() throws {
+        let root = historyRoot(); defer { try? FileManager.default.removeItem(at: root) }
+        let library = LibraryStore(qa: true, storageRoot: root)
+        let file = library.directory.appendingPathComponent("recent-searches.json")
+        let corrupt = Data("not a valid search history".utf8); try corrupt.write(to: file)
+        library.load(owner: "guest")
+        XCTAssertNotNil(library.searchHistoryError); XCTAssertNil(library.error)
+        var query = SearchQuery(); query.text = "valid search"
+        XCTAssertFalse(library.recordSearch(query: query, site: .ex))
+        XCTAssertEqual(try Data(contentsOf: file), corrupt)
+        XCTAssertNotNil(library.saveSearch(name: "Still works", site: .ex, query: query))
+        XCTAssertTrue(library.clearSearchHistory()); XCTAssertNil(library.searchHistoryError)
+        XCTAssertTrue(library.recordSearch(query: query, site: .ex))
+        XCTAssertEqual(library.snapshot.saved.count, 1)
+    }
+
+    @MainActor func testSearchHistoryWriteFailureKeepsExistingMemoryAndLibraryWritable() throws {
+        let root = historyRoot(); defer { try? FileManager.default.removeItem(at: root) }
+        let library = LibraryStore(qa: true, storageRoot: root)
+        var query = SearchQuery(); query.text = "first"
+        XCTAssertTrue(library.recordSearch(query: query, site: .ex))
+        let file = library.directory.appendingPathComponent("recent-searches.json")
+        try FileManager.default.moveItem(at: file, to: file.appendingPathExtension("backup"))
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        query.text = "second"
+        XCTAssertFalse(library.recordSearch(query: query, site: .ex))
+        XCTAssertEqual(library.recentSearches.map(\.query.text), ["first"])
+        XCTAssertNotNil(library.searchHistoryError); XCTAssertNil(library.error)
+        XCTAssertNotNil(library.saveSearch(name: "Saved independently", site: .ex, query: query))
+    }
+
     func testSessionVaultRoundTripUsesAppKeychainIdentity() throws {
         let service = "com.xueyj.exviewer.qa.nonsecret-vault." + UUID().uuidString
         defer { try? SessionVault.delete(service: service) }

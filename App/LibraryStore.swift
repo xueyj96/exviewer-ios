@@ -26,22 +26,47 @@ struct LibrarySnapshot: Codable {
     var downloads: [DownloadRecord] = []
 }
 
+struct RecentSearchRecord: Codable, Identifiable {
+    var id = UUID()
+    var site: GallerySite
+    var query: SearchQuery
+    var date: Date
+
+    static func requestKey(site: GallerySite, query: SearchQuery) throws -> String {
+        var canonical = query
+        canonical.rules.sort {
+            $0.id == $1.id ? $0.match.rawValue < $1.match.rawValue : $0.id < $1.id
+        }
+        return try canonical.url(site: site).absoluteString
+    }
+}
+
+private struct RecentSearchFile: Codable {
+    var version = 1
+    var entries: [RecentSearchRecord]
+}
+
 @MainActor final class LibraryStore: ObservableObject {
     @Published private(set) var snapshot = LibrarySnapshot()
+    @Published private(set) var recentSearches: [RecentSearchRecord] = []
+    @Published private(set) var searchHistoryError: String?
     @Published var error: String?
     @Published private(set) var owner = "guest"
     private let root: URL
     private let ephemeral: Bool
     var directory: URL { root.appendingPathComponent(owner, isDirectory: true) }
     var blockedIDs: Set<String> { Set(snapshot.blockedTags.map(\.id)) }
-    init(qa: Bool = false) {
+    static let searchHistoryLimit = 100
+    private var searchHistoryFile: URL { directory.appendingPathComponent("recent-searches.json") }
+    init(qa: Bool = false, storageRoot: URL? = nil) {
         ephemeral = qa
-        root = qa ? FileManager.default.temporaryDirectory.appendingPathComponent("ExViewer-QA-" + UUID().uuidString) : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ExViewer", isDirectory: true)
+        root = storageRoot ?? (qa ? FileManager.default.temporaryDirectory.appendingPathComponent("ExViewer-QA-" + UUID().uuidString) : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ExViewer", isDirectory: true))
         load(owner: "guest")
     }
     func load(owner: String) {
         guard owner == "guest" || owner.allSatisfy({ $0.isHexDigit }) else { return }
         self.owner = owner; snapshot = LibrarySnapshot(); error = nil
+        recentSearches = []; searchHistoryError = nil
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
             var location = directory; var attributes = URLResourceValues(); attributes.isExcludedFromBackup = true; try location.setResourceValues(attributes)
@@ -67,11 +92,59 @@ struct LibrarySnapshot: Codable {
                 }
             }
         } catch { self.error = "资料库暂时无法读取，原文件已保留。请重试，避免覆盖。" }
+        loadSearchHistory()
         if LibrarySelectionQA.seedsBlockedTags(isQA: ephemeral, arguments: ProcessInfo.processInfo.arguments) {
             var qaSnapshot = snapshot
             qaSnapshot.blockedTags = LibrarySelectionQA.blockedTags
             snapshot = qaSnapshot
         }
+    }
+
+    private func loadSearchHistory() {
+        guard FileManager.default.fileExists(atPath: searchHistoryFile.path) else { return }
+        do {
+            let data = try Data(contentsOf: searchHistoryFile)
+            guard data.count < 256_000 else { throw ViewerError.storage }
+            let file = try JSONDecoder().decode(RecentSearchFile.self, from: data)
+            guard file.version == 1, file.entries.count <= Self.searchHistoryLimit,
+                  Set(file.entries.map(\.id)).count == file.entries.count else { throw ViewerError.storage }
+            for entry in file.entries {
+                guard entry.query.count > 0 else { throw ViewerError.storage }
+                _ = try entry.query.url(site: entry.site)
+            }
+            recentSearches = file.entries
+        } catch { searchHistoryError = "搜索记录暂时无法读取，原文件已保留；可清空搜索记录后重新记录。" }
+    }
+
+    @discardableResult private func saveSearchHistory(_ entries: [RecentSearchRecord], resetting: Bool = false) -> Bool {
+        guard searchHistoryError == nil || resetting else { return false }
+        do {
+            let data = try JSONEncoder().encode(RecentSearchFile(entries: entries))
+            guard data.count < 256_000 else { throw ViewerError.storage }
+            try data.write(to: searchHistoryFile, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            recentSearches = entries; searchHistoryError = nil
+            return true
+        } catch { searchHistoryError = "搜索记录保存失败，原有记录保留；请检查本机空间。"; return false }
+    }
+
+    @discardableResult func recordSearch(query: SearchQuery, site: GallerySite, date: Date = Date()) -> Bool {
+        guard query.count > 0, let key = try? RecentSearchRecord.requestKey(site: site, query: query) else { return false }
+        var entries = recentSearches
+        let existing = entries.firstIndex { (try? RecentSearchRecord.requestKey(site: $0.site, query: $0.query)) == key }
+        let id = existing.map { entries.remove(at: $0).id } ?? UUID()
+        entries.insert(RecentSearchRecord(id: id, site: site, query: query, date: date), at: 0)
+        return saveSearchHistory(Array(entries.prefix(Self.searchHistoryLimit)))
+    }
+
+    @discardableResult func deleteRecentSearch(_ id: UUID) -> Bool {
+        saveSearchHistory(recentSearches.filter { $0.id != id })
+    }
+
+    @discardableResult func clearSearchHistory() -> Bool { saveSearchHistory([], resetting: true) }
+
+    func savedSearch(matching query: SearchQuery, site: GallerySite) -> SavedSearch? {
+        guard let key = try? RecentSearchRecord.requestKey(site: site, query: query) else { return nil }
+        return snapshot.saved.first { (try? RecentSearchRecord.requestKey(site: $0.site, query: $0.query)) == key }
     }
     @discardableResult private func commit(_ mutate: (inout LibrarySnapshot) -> Void) -> Bool {
         guard error == nil else { return false }
@@ -122,5 +195,26 @@ struct LibrarySnapshot: Codable {
             if exists { try FileManager.default.removeItem(at: staged) }
         }
         catch { self.error = "本机副本未能移除，请重试。" }
+    }
+}
+
+
+enum SearchPresentation {
+    static func summary(_ query: SearchQuery, site: GallerySite) -> String {
+        var values = [site == .ex ? "EX" : "EH"]
+        if !query.text.isEmpty { values.append(query.text) }
+        if query.titleOnly { values.append("仅标题") }
+        if !query.artist.isEmpty { values.append("作者 \(query.artist)") }
+        for match in [TagMatch.all, .any, .exclude] {
+            let tags = query.rules.filter { $0.match == match }.map { $0.tag.label }
+            if !tags.isEmpty { values.append("\(match.name) \(tags.joined(separator: "、"))") }
+        }
+        let categories = GalleryCategory.all.filter { query.excludedCategories.contains($0.id) }.map(\.name)
+        if !categories.isEmpty { values.append("排除分类 \(categories.joined(separator: "、"))") }
+        if let rating = query.minRating { values.append("≥\(rating)星") }
+        if query.minPages != nil || query.maxPages != nil { values.append("\(query.minPages.map { String($0) } ?? "0")–\(query.maxPages.map { String($0) } ?? "不限")页") }
+        if !query.uploader.isEmpty { values.append("上传者 \(query.uploader)") }
+        if query.requireTorrent { values.append("torrent") }
+        return values.joined(separator: " · ")
     }
 }

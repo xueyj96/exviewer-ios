@@ -66,6 +66,7 @@ struct DiscoverView: View {
                 _ = try navigation.submit(query: query, site: site, lane: entry.lane, savedID: editingSaved, session: session, qa: AppMode.qa)
                 started = true
                 publish(navigation.current)
+                library.recordSearch(query: navigation.current.query, site: navigation.current.site)
                 error = nil
             } catch { self.error = message(for: error) }
         }
@@ -77,6 +78,7 @@ struct DiscoverView: View {
                 do {
                     _ = try navigation.submit(query: query, site: site, lane: entry.lane, savedID: editingSaved, session: session, qa: AppMode.qa)
                     started = true; publish(navigation.current)
+                    library.recordSearch(query: navigation.current.query, site: navigation.current.site)
                 } catch { self.error = message(for: error) }
             }
         }
@@ -214,6 +216,7 @@ struct DiscoverView: View {
             _ = try navigation.submit(query: query, site: site, lane: entry.lane, savedID: savedID, session: session, qa: AppMode.qa)
             started = true
             publish(navigation.current)
+            library.recordSearch(query: navigation.current.query, site: navigation.current.site)
             error = nil
             pendingEdit = nil
         }
@@ -254,7 +257,9 @@ struct DiscoverView: View {
 
     private func startCurrent() {
         do {
+            let isFirstExecution = !entry.didStart
             try navigation.startCurrent(session: session, qa: AppMode.qa)
+            if isFirstExecution { library.recordSearch(query: entry.query, site: entry.site) }
             started = true; error = nil
         } catch { self.error = message(for: error) }
     }
@@ -263,6 +268,7 @@ struct DiscoverView: View {
         do {
             _ = try navigation.submit(query: query, site: site, lane: lane, savedID: savedID, session: session, qa: AppMode.qa)
             started = true; publish(navigation.current); error = nil
+            library.recordSearch(query: navigation.current.query, site: navigation.current.site)
         } catch { self.error = message(for: error) }
     }
 
@@ -309,21 +315,7 @@ struct DiscoverView: View {
     }
 
     private func searchSummary(_ query: SearchQuery, site: GallerySite) -> String {
-        var values = [site == .ex ? "EX" : "EH"]
-        if !query.text.isEmpty { values.append(query.text) }
-        if query.titleOnly { values.append("仅标题") }
-        if !query.artist.isEmpty { values.append("作者 \(query.artist)") }
-        for match in [TagMatch.all, .any, .exclude] {
-            let tags = query.rules.filter { $0.match == match }.map { $0.tag.label }
-            if !tags.isEmpty { values.append("\(match.name) \(tags.joined(separator: "、"))") }
-        }
-        let categories = GalleryCategory.all.filter { query.excludedCategories.contains($0.id) }.map(\.name)
-        if !categories.isEmpty { values.append("排除分类 \(categories.joined(separator: "、"))") }
-        if let rating = query.minRating { values.append("≥\(rating)星") }
-        if query.minPages != nil || query.maxPages != nil { values.append("\(query.minPages.map { String($0) } ?? "0")–\(query.maxPages.map { String($0) } ?? "不限")页") }
-        if !query.uploader.isEmpty { values.append("上传者 \(query.uploader)") }
-        if query.requireTorrent { values.append("torrent") }
-        return values.joined(separator: " · ")
+        SearchPresentation.summary(query, site: site)
     }
 }
 
