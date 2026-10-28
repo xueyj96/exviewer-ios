@@ -38,30 +38,38 @@ private struct SearchPresetRow: View {
     var date: Date? = nil
     var selection: String? = nil
     var action: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var displayTitle: String {
+        let summary = SearchPresentation.conditions(query)
+        let generated = [query.text, summary, SearchPresentation.summary(query, site: site)]
+        return generated.contains(where: { String($0.prefix(80)) == title }) ? (summary.isEmpty ? "全部画廊" : summary) : title
+    }
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                    Text(displayTitle).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3).fixedSize(horizontal: false, vertical: true)
                     let details = SearchPresentation.conditions(query)
-                    if details != title && !details.isEmpty {
+                    if details != displayTitle && !details.isEmpty {
                         Text(details).font(.caption).foregroundStyle(.secondary)
-                            .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 3).fixedSize(horizontal: false, vertical: true)
                     }
                     HStack(spacing: 8) {
                         Text(site == .ex ? "EX" : "EH")
-                        if let date { Text(date, style: .relative) }
+                        if let date { Text(date, style: .relative).lineLimit(1) }
+                        Spacer(minLength: 8)
+                        if let selection {
+                            Label(selection, systemImage: selection == "已修改" ? "pencil.circle" : "checkmark.circle.fill")
+                                .labelStyle(.titleAndIcon).foregroundStyle(Color.accentColor)
+                                .fixedSize(horizontal: true, vertical: false)
+                        } else {
+                            Image(systemName: "arrow.up.left")
+                        }
                     }.font(.caption2).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                if let selection {
-                    Label(selection, systemImage: selection == "已修改" ? "pencil.circle" : "checkmark.circle.fill")
-                        .font(.caption).foregroundStyle(Color.accentColor).fixedSize()
-                } else {
-                    Text("载入").font(.caption).foregroundStyle(.secondary).fixedSize()
-                }
-            }.padding(.vertical, 5).frame(minHeight: 44).contentShape(Rectangle())
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 5).frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityValue(selection ?? "载入条件编辑，尚未执行搜索")
@@ -70,86 +78,89 @@ private struct SearchPresetRow: View {
     }
 }
 
-private struct SavedSearchesSheet: View {
-    var selectedID: UUID?
-    var selectionModified: Bool
-    var onLoad: (SavedSearch) -> Void
-    @EnvironmentObject private var library: LibraryStore
-    @Environment(\.dismiss) private var dismiss
+private enum SearchPresetTab: Hashable { case recent, favorite }
+private enum SearchComposerPage: Hashable { case filters, records }
 
-    var body: some View {
-        NavigationStack {
-            List(library.snapshot.saved) { saved in
-                SearchPresetRow(title: saved.name, query: saved.query, site: saved.site,
-                                selection: selectedID == saved.id ? (selectionModified ? "已修改" : "已载入") : nil) {
-                    onLoad(saved); dismiss()
-                }.accessibilityIdentifier("search-favorites.load.\(saved.id)")
-            }
-            .navigationTitle("常用组合").navigationBarTitleDisplayMode(.inline).appNavigationChrome()
-            .toolbar {
-                AppToolbarItem(placement: .cancellationAction) {
-                    Button("完成") { dismiss() }.accessibilityIdentifier("search-favorites.close")
-                }
-            }
-        }
-    }
-}
-
-private struct RecentSearchesSheet: View {
-    var selectedID: UUID?
-    var selectionModified: Bool
-    var onLoad: (RecentSearchRecord) -> Void
+private struct SearchPresetsView: View {
+    @Binding var tab: SearchPresetTab
+    var source: LoadedSearchSource?
+    var sourceModified: Bool
+    var onLoad: (LoadedSearchSource) -> Void
     @EnvironmentObject private var library: LibraryStore
-    @Environment(\.dismiss) private var dismiss
     @State private var favorite: FavoriteSearchDraft?
     @State private var clearing = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                if let error = library.searchHistoryError {
-                    Text(error).font(.subheadline).foregroundStyle(.secondary)
-                }
-                if library.recentSearches.isEmpty {
-                    Text("暂无搜索记录。执行搜索后，完整条件会保存在当前账号本机。")
-                        .foregroundStyle(.secondary).accessibilityIdentifier("search-history.empty")
-                }
-                ForEach(library.recentSearches) { record in
-                    HStack(spacing: 10) {
-                        SearchPresetRow(title: SearchPresentation.recordTitle(record.query), query: record.query,
-                                        site: record.site, date: record.date,
-                                        selection: selectedID == record.id ? (selectionModified ? "已修改" : "已载入") : nil) {
-                            onLoad(record); dismiss()
-                        }.accessibilityIdentifier("search-history.load.\(record.id)")
-                        Button {
-                            favorite = FavoriteSearchDraft(query: record.query, site: record.site,
-                                                           existing: library.savedSearch(matching: record.query, site: record.site))
-                        } label: { Image(systemName: "bookmark").frame(width: 44, height: 44) }
-                        .buttonStyle(.borderless).accessibilityLabel("将这组条件存为常用")
-                        .accessibilityIdentifier("search-history.save.\(record.id)")
-                    }
-                    .swipeActions { Button("删除", role: .destructive) { library.deleteRecentSearch(record.id) } }
-                }
+        List {
+            Section {
+                Picker("记录类型", selection: $tab) {
+                    Text("最近搜索").tag(SearchPresetTab.recent)
+                    Text("常用组合").tag(SearchPresetTab.favorite)
+                }.pickerStyle(.segmented).accessibilityIdentifier("compose.records-tabs")
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
             }
-            .navigationTitle("搜索记录").navigationBarTitleDisplayMode(.inline).appNavigationChrome()
-            .toolbar {
-                AppToolbarItem(placement: .cancellationAction) {
-                    Button("完成") { dismiss() }.accessibilityIdentifier("search-history.close")
+            if tab == .recent {
+                if let error = library.searchHistoryError {
+                    Section { Text(error).font(.subheadline).foregroundStyle(.secondary) }
                 }
+                Section {
+                    if library.recentSearches.isEmpty {
+                        Text("暂无搜索记录").foregroundStyle(.secondary).accessibilityIdentifier("search-history.empty")
+                    }
+                    ForEach(library.recentSearches) { record in
+                        HStack(spacing: 8) {
+                            SearchPresetRow(title: SearchPresentation.conditions(record.query), query: record.query,
+                                            site: record.site, date: record.date, selection: selection(.recent, record.id)) {
+                                onLoad(LoadedSearchSource(record))
+                            }.accessibilityIdentifier("search-history.load.\(record.id)")
+                            Button {
+                                favorite = FavoriteSearchDraft(query: record.query, site: record.site,
+                                    existing: library.savedSearch(matching: record.query, site: record.site))
+                            } label: { Image(systemName: "bookmark").frame(width: 44, height: 44) }
+                            .buttonStyle(.borderless).accessibilityLabel("将这组条件存为常用")
+                            .accessibilityIdentifier("search-history.save.\(record.id)")
+                        }
+                        .listRowBackground(selection(.recent, record.id) == nil ? Color(uiColor: .secondarySystemGroupedBackground) : Color(uiColor: .tertiarySystemFill))
+                        .swipeActions { Button("删除", role: .destructive) { library.deleteRecentSearch(record.id) } }
+                    }
+                } footer: { Text("点选记录载入编辑，返回后点击“搜索”执行。") }
+            } else {
+                Section {
+                    if library.snapshot.saved.isEmpty {
+                        Text("暂无常用组合").foregroundStyle(.secondary).accessibilityIdentifier("search-favorites.empty")
+                    }
+                    ForEach(library.snapshot.saved) { saved in
+                        SearchPresetRow(title: saved.name, query: saved.query, site: saved.site,
+                                        selection: selection(.favorite, saved.id)) {
+                            onLoad(LoadedSearchSource(saved))
+                        }.accessibilityIdentifier("search-favorites.load.\(saved.id)")
+                    }
+                } footer: { Text("点选组合载入编辑；编辑草稿不会自动覆盖已保存的组合。") }
+            }
+        }
+        .navigationTitle("记录与常用").navigationBarTitleDisplayMode(.inline).appNavigationChrome(backButton: true)
+        .toolbar {
+            if tab == .recent {
                 AppToolbarItem(placement: .primaryAction) {
                     Button("清空") { clearing = true }
                         .disabled(library.recentSearches.isEmpty && library.searchHistoryError == nil)
                         .accessibilityIdentifier("search-history.clear")
                 }
             }
-            .confirmationDialog("清空当前账号的搜索记录？常用组合会保留。", isPresented: $clearing, titleVisibility: .visible) {
-                Button("清空搜索记录", role: .destructive) { library.clearSearchHistory() }
-            }
-            .sheet(item: $favorite) { target in
-                SaveSearchSheet(query: target.query, site: target.site, replacing: target.replacing,
-                                initialName: target.name) { _ in }
-            }
         }
+        .confirmationDialog("清空当前账号的搜索记录？常用组合会保留。", isPresented: $clearing, titleVisibility: .visible) {
+            Button("清空搜索记录", role: .destructive) { library.clearSearchHistory() }
+        }
+        .sheet(item: $favorite) { target in
+            SaveSearchSheet(query: target.query, site: target.site, replacing: target.replacing,
+                            initialName: target.name) { _ in }
+        }
+    }
+
+    private func selection(_ kind: LoadedSearchSource.Kind, _ id: UUID) -> String? {
+        guard source?.kind == kind, source?.id == id else { return nil }
+        return sourceModified ? "已修改" : "已载入"
     }
 }
 
@@ -198,7 +209,7 @@ struct DiscoveryComposerView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var session: SiteSession
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var draftQuery: SearchQuery
     @State private var draftSite: GallerySite
     @State private var draftSavedID: UUID?
@@ -206,14 +217,12 @@ struct DiscoveryComposerView: View {
     @State private var minimumPagesText: String
     @State private var maximumPagesText: String
     @State private var tagMatch: TagMatch = .all
-    @State private var advanced = false
     @State private var tagEntry = false
     @State private var failure: String?
-    @State private var showingHistory = false
-    @State private var showingFavorites = false
     @State private var favorite: FavoriteSearchDraft?
     @State private var loadedSource: LoadedSearchSource?
-    @State private var loadRevision = 0
+    @State private var path: [SearchComposerPage] = []
+    @State private var recordsTab: SearchPresetTab = .recent
     @FocusState private var inputFocused: Bool
 
     init(query: SearchQuery, site: GallerySite, savedID: UUID?, onApply: @escaping (SearchQuery, GallerySite, UUID?) throws -> Void) {
@@ -227,31 +236,125 @@ struct DiscoveryComposerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollViewReader { scroll in
-            Form {
-                Section {
-                    editorStatus.id("compose.editor-top")
-                    TextField("关键词、title:标题、namespace:标签", text: $inputText, axis: .vertical)
-                        .lineLimit(1...3).autocorrectionDisabled().textInputAutocapitalization(.never)
-                        .focused($inputFocused)
-                        .accessibilityIdentifier("compose.text")
-                        .accessibilityHint("支持包含、~任一、-排除标签和 uploader:上传者；标签含空格时可加引号。")
+        NavigationStack(path: $path) {
+            mainPage.navigationDestination(for: SearchComposerPage.self) { page in
+                switch page {
+                case .filters: filtersPage
+                case .records:
+                    SearchPresetsView(tab: $recordsTab, source: loadedSource, sourceModified: sourceModified) { source in
+                        load(source); path.removeAll()
+                    }
                 }
-                quickSearches
+            }
+        }
+        .onChange(of: path) { _, value in
+            if !value.isEmpty { inputFocused = false; failure = nil }
+            if value.last == .filters,
+               let parsed = try? SearchInputParser.parse(inputText, preserving: draftQuery) {
+                draftQuery = parsed.query
+                inputText = parsed.query.text
+            }
+        }
+        .sheet(isPresented: $tagEntry) {
+            TagEntryView { tag, match in addTag(tag, match: match) }
+                .environmentObject(library).environmentObject(session)
+        }
+        .sheet(item: $favorite) { target in
+            SaveSearchSheet(query: target.query, site: target.site, replacing: target.replacing,
+                            initialName: target.name) { id in draftSavedID = id }
+        }
+    }
+
+    private var mainPage: some View {
+        Form {
+            Section {
+                TextField("关键词或标题", text: $inputText, axis: .vertical)
+                    .lineLimit(1...3).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    .focused($inputFocused).accessibilityIdentifier("compose.text")
+                    .accessibilityHint("也支持 title:、namespace:tag、~任一、-排除和 uploader: 条件。")
+            } footer: {
+                if let source = loadedSource {
+                    Label(loadedStatus, systemImage: sourceModified ? "pencil.circle" : "checkmark.circle")
+                        .labelStyle(.titleAndIcon).font(.caption).foregroundStyle(Color.accentColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("compose.loaded-state")
+                        .accessibilityValue(sourceModified ? "已修改" : "已载入")
+                        .accessibilityHint(source.title)
+                }
+            }
+            Section {
+                NavigationLink(value: SearchComposerPage.filters) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if typeSize.isAccessibilitySize {
+                            Label("筛选条件", systemImage: "slider.horizontal.3").labelStyle(.titleAndIcon)
+                            Text(filterCount).font(.subheadline).foregroundStyle(.secondary)
+                        } else { HStack {
+                            Label("筛选条件", systemImage: "slider.horizontal.3").labelStyle(.titleAndIcon)
+                            Spacer(minLength: 8)
+                            Text(filterCount).font(.subheadline).foregroundStyle(.secondary)
+                        } }
+                        if !filterSummary.isEmpty {
+                            Text(filterSummary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                .accessibilityIdentifier("compose.current-summary")
+                        }
+                    }.padding(.vertical, 3)
+                }.accessibilityIdentifier("compose.filters")
+                    .accessibilityValue("\(filterCount) · \(filterSummary)")
+                NavigationLink(value: SearchComposerPage.records) {
+                    Label("记录与常用", systemImage: "clock.arrow.circlepath").labelStyle(.titleAndIcon)
+                }.accessibilityIdentifier("compose.records")
+            }
+            if let failure { Section { Text(failure).foregroundStyle(.red).accessibilityIdentifier("compose.error") } }
+        }
+        .navigationTitle("组合搜索").navigationBarTitleDisplayMode(.inline).appNavigationChrome()
+        .toolbar {
+            AppToolbarItem(placement: .cancellationAction) {
+                Button("取消") { dismiss() }.accessibilityIdentifier("compose.cancel")
+            }
+            AppToolbarItem(placement: .confirmationAction, tone: .accent) {
+                Button("搜索") { apply() }.fontWeight(.semibold).accessibilityIdentifier("compose.apply")
+            }
+            AppToolbarItem(placement: .primaryAction) {
+                Button { prepareFavorite() } label: { Image(systemName: "bookmark") }
+                    .accessibilityLabel("保存当前条件为常用").accessibilityIdentifier("compose.save-favorite")
+            }
+        }
+    }
+
+    private var filterCount: String {
+        guard let query = try? proposedQuery() else { return "待检查" }
+        let count = query.count - (query.text.isEmpty ? 0 : 1) + (query.titleOnly ? 1 : 0) + (query.matchPhrase ? 1 : 0)
+        let scope = draftSite == .ex ? "EX" : "EH"
+        return "\(scope) · \(count == 0 ? "不限" : "\(count) 项")"
+    }
+
+    private var filterSummary: String {
+        guard var query = try? proposedQuery() else { return "请检查筛选条件" }
+        query.text = ""
+        return SearchPresentation.conditions(query)
+    }
+
+    private var loadedStatus: String {
+        let origin = loadedSource?.kind == .recent ? "从最近搜索载入" : "从常用组合载入"
+        let count = (try? proposedQuery()).map { "\($0.count) 项条件" } ?? "条件待检查"
+        return "\(origin) · \(count)\(sourceModified ? " · 已修改" : "")"
+    }
+
+    private var filtersPage: some View {
+        Form {
                 Section("搜索范围") {
                     Picker("站点", selection: $draftSite) { ForEach(GallerySite.allCases) { Text($0.name).tag($0) } }
                     Toggle("关键词只匹配标题", isOn: $draftQuery.titleOnly)
                     Toggle("关键词按完整短语匹配", isOn: $draftQuery.matchPhrase)
                     HStack(spacing: 8) {
                         Image(systemName: "person").foregroundStyle(.secondary)
-                        TextField("作者 artist（不是上传者）", text: $draftQuery.artist)
+                        TextField("作者 artist", text: $draftQuery.artist)
                             .autocorrectionDisabled().textInputAutocapitalization(.never)
                             .accessibilityIdentifier("compose.artist")
                     }
                 }
 
-                Section("标签条件 · 包含 AND / 任一 OR / 排除") {
+                Section("标签条件") {
                     Picker("新加标签方式", selection: $tagMatch) {
                         ForEach(TagMatch.allCases, id: \.self) { Text($0.name).tag($0) }
                     }.pickerStyle(.segmented)
@@ -270,7 +373,7 @@ struct DiscoveryComposerView: View {
                     ForEach(draftQuery.rules) { rule in
                         HStack(spacing: 8) {
                             Text(rule.match.name).font(.caption).foregroundStyle(.secondary)
-                            Text(rule.tag.label).lineLimit(1)
+                            Text(rule.tag.label).fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
                             Button(role: .destructive) { draftQuery.rules.removeAll { $0.id == rule.id } } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
                                 .accessibilityLabel("移除 \(rule.tag.label)")
@@ -304,8 +407,7 @@ struct DiscoveryComposerView: View {
                     }
                 }
 
-                Section {
-                    DisclosureGroup("高级限制", isExpanded: $advanced) {
+                Section("评分、页数与上传者") {
                         Picker("最低评分", selection: Binding(get: { draftQuery.minRating ?? 0 }, set: { draftQuery.minRating = $0 == 0 ? nil : $0 })) {
                             Text("不限").tag(0); ForEach(2...5, id: \.self) { Text("\($0) 星").tag($0) }
                         }
@@ -317,129 +419,21 @@ struct DiscoveryComposerView: View {
                         TextField("上传者 uploader（可选）", text: $draftQuery.uploader).autocorrectionDisabled().textInputAutocapitalization(.never).accessibilityIdentifier("compose.uploader")
                         Toggle("必须有 torrent", isOn: $draftQuery.requireTorrent)
                         if let warning = draftQuery.pageRangeWarning { Text(warning).font(.caption).foregroundStyle(.secondary) }
-                    }.accessibilityIdentifier("compose.advanced")
-                }
+                }.accessibilityIdentifier("compose.advanced")
 
-                if let failure { Section { Text(failure).foregroundStyle(.red).accessibilityIdentifier("compose.error") } }
-            }
-            .onChange(of: loadRevision) { _, _ in
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-                    scroll.scrollTo("compose.editor-top", anchor: .top)
-                }
-            }
-            }
-            .navigationTitle("组合搜索").navigationBarTitleDisplayMode(.inline).appNavigationChrome()
-            .toolbar {
-                AppToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }.accessibilityIdentifier("compose.cancel")
-                }
-                AppToolbarItem(placement: .confirmationAction, tone: .accent) {
-                    Button("搜索") { apply() }.fontWeight(.semibold).accessibilityIdentifier("compose.apply")
-                }
-                AppToolbarItem(placement: .primaryAction) {
-                    Button { prepareFavorite() } label: { Image(systemName: "bookmark") }
-                        .accessibilityLabel("保存当前条件为常用").accessibilityIdentifier("compose.save-favorite")
-                }
-            }
-            .sheet(isPresented: $tagEntry) {
-                TagEntryView { tag, match in addTag(tag, match: match) }
-                    .environmentObject(library)
-                    .environmentObject(session)
-            }
-            .sheet(isPresented: $showingHistory) {
-                RecentSearchesSheet(selectedID: loadedSource?.kind == .recent ? loadedSource?.id : nil,
-                                    selectionModified: sourceModified) { load(LoadedSearchSource($0)) }
-            }
-            .sheet(isPresented: $showingFavorites) {
-                SavedSearchesSheet(selectedID: loadedSource?.kind == .favorite ? loadedSource?.id : nil,
-                                   selectionModified: sourceModified) { load(LoadedSearchSource($0)) }
-            }
-            .sheet(item: $favorite) { target in
-                SaveSearchSheet(query: target.query, site: target.site, replacing: target.replacing,
-                                initialName: target.name) { id in draftSavedID = id }
-            }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle("筛选条件").navigationBarTitleDisplayMode(.inline).appNavigationChrome(backButton: true)
+        .accessibilityIdentifier("compose.filter-page")
     }
 
     private var sourceModified: Bool {
         guard let source = loadedSource else { return false }
-        return draftSite != source.site || draftQuery != source.query || inputText != source.query.text ||
+        guard let current = try? SearchInputParser.parse(inputText, preserving: draftQuery).query,
+              let baseline = try? SearchInputParser.parse(source.query.text, preserving: source.query).query else { return true }
+        return draftSite != source.site || current != baseline ||
             minimumPagesText != (source.query.minPages.map(String.init) ?? "") ||
             maximumPagesText != (source.query.maxPages.map(String.init) ?? "")
-    }
-
-    private var editorStatus: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let source = loadedSource {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(source.kind == .favorite ? "来自常用组合" : "来自最近搜索")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer(minLength: 8)
-                    Label(sourceModified ? "已修改" : "已载入", systemImage: sourceModified ? "pencil.circle" : "checkmark.circle.fill")
-                        .font(.caption.weight(.medium)).foregroundStyle(Color.accentColor)
-                        .accessibilityIdentifier("compose.loaded-state")
-                }
-                Text(source.title).font(.subheadline.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("compose.loaded-title")
-                Text(sourceModified ? "当前是修改后的草稿，点击“搜索”后生效。" : "条件已载入，尚未搜索。")
-                    .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("compose.loaded-hint")
-            } else {
-                Text("当前条件").font(.subheadline.weight(.medium))
-            }
-            if let query = try? proposedQuery(), query.count > 0 {
-                Text(SearchPresentation.summary(query, site: draftSite)).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("compose.current-summary")
-            }
-        }.padding(.vertical, 3)
-    }
-
-    @ViewBuilder private var quickSearches: some View {
-        if !library.snapshot.saved.isEmpty {
-            Section {
-                ForEach(library.snapshot.saved.prefix(3)) { saved in
-                    SearchPresetRow(title: saved.name, query: saved.query, site: saved.site,
-                                    selection: selection(kind: .favorite, id: saved.id)) {
-                        load(LoadedSearchSource(saved))
-                    }.accessibilityIdentifier("compose.favorite.\(saved.id)")
-                }
-            } header: {
-                HStack {
-                    Text("常用组合")
-                    Spacer()
-                    if library.snapshot.saved.count > 3 {
-                        Button("全部组合") { showingFavorites = true }.textCase(nil)
-                            .accessibilityIdentifier("compose.search-favorites")
-                    }
-                }
-            }
-        }
-        Section {
-            if library.recentSearches.isEmpty {
-                Text("执行搜索后会记录完整条件；取消的草稿不记录。")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else {
-                ForEach(library.recentSearches.prefix(3)) { record in
-                    SearchPresetRow(title: SearchPresentation.recordTitle(record.query), query: record.query,
-                                    site: record.site, date: record.date,
-                                    selection: selection(kind: .recent, id: record.id)) {
-                        load(LoadedSearchSource(record))
-                    }.accessibilityIdentifier("compose.recent.\(record.id)")
-                }
-            }
-            if let error = library.searchHistoryError { Text(error).font(.caption).foregroundStyle(.secondary) }
-        } header: {
-            HStack {
-                Text("最近搜索")
-                Spacer()
-                Button("全部记录") { showingHistory = true }.textCase(nil)
-                    .accessibilityIdentifier("compose.search-history")
-            }
-        }
-    }
-
-    private func selection(kind: LoadedSearchSource.Kind, id: UUID) -> String? {
-        guard loadedSource?.kind == kind, loadedSource?.id == id else { return nil }
-        return sourceModified ? "已修改" : "已载入"
     }
 
     private func load(_ source: LoadedSearchSource) {
@@ -451,7 +445,6 @@ struct DiscoveryComposerView: View {
         maximumPagesText = source.query.maxPages.map(String.init) ?? ""
         loadedSource = source
         failure = nil
-        loadRevision += 1
         UISelectionFeedbackGenerator().selectionChanged()
     }
 

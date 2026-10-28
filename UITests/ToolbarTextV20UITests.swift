@@ -24,6 +24,8 @@ final class ToolbarTextV20UITests: XCTestCase {
         horizontal(app.buttons["compose.cancel"], app: app, name: "compose.cancel")
         horizontal(app.buttons["compose.apply"], app: app, name: "compose.search")
 
+        app.buttons["compose.filters"].tap()
+        XCTAssertTrue(app.navigationBars["筛选条件"].waitForExistence(timeout: 6))
         let add = app.buttons["compose.add-tag"]
         for _ in 0..<4 { if add.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(add.isHittable); add.tap()
@@ -31,6 +33,8 @@ final class ToolbarTextV20UITests: XCTestCase {
         horizontal(app.buttons["tag.cancel"], app: app, name: "tag.cancel")
         horizontal(app.buttons["tag.confirm"], app: app, name: "tag.done")
         app.buttons["tag.cancel"].tap()
+        XCTAssertTrue(app.navigationBars["筛选条件"].waitForExistence(timeout: 6))
+        app.buttons["BackButton"].tap()
         XCTAssertTrue(app.navigationBars["组合搜索"].waitForExistence(timeout: 6))
         app.buttons["compose.cancel"].tap()
         XCTAssertTrue(entry.waitForExistence(timeout: 6))
