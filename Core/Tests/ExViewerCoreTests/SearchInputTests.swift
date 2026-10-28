@@ -2,6 +2,23 @@ import XCTest
 @testable import ExViewerCore
 
 final class SearchInputTests: XCTestCase {
+    func testMixedCaseTagScopesEmitCanonicalTermsWithoutChangingTitleOrDisplay() throws {
+        let parsed = try SearchInputParser.parse(#"title:"Autumn Book" LANGUAGE:EnGLISh -OTHER:"Full Color" ~ArTiSt:SaMpLe"#)
+        XCTAssertEqual(try parsed.query.expression(), #"title:"Autumn Book" language:"english"$ -other:"full color"$ ~artist:"sample"$"#)
+        XCTAssertEqual(parsed.query.rules.map(\.tag.name), ["EnGLISh", "Full Color", "SaMpLe"])
+        var query = SearchQuery(); query.artist = "Sample Artist"; query.uploader = "Example_User"
+        XCTAssertEqual(try query.expression(), #"artist:"sample artist"$ uploader:"Example_User""#)
+    }
+
+    func testCaseVariantsReplaceSameTagAcrossIncludeAndExclude() throws {
+        var query = SearchQuery(); query.rules = [.init(tag: .init(namespace: "language", name: "English"))]
+        let parsed = try SearchInputParser.parse("-LANGUAGE:ENGLISH", preserving: query)
+        XCTAssertEqual(parsed.query.rules.count, 1)
+        XCTAssertEqual(parsed.query.rules.first?.match, .exclude)
+        XCTAssertEqual(try parsed.query.expression(), #"-language:"english"$"#)
+        XCTAssertEqual(TagFilter.decision(tags: [.init(namespace: "LANGUAGE", name: "EnGLISH")], blocked: ["language:english"], complete: true), .blocked)
+    }
+
     func testNamespaceAliasesAreCanonicalAndDeduplicated() throws {
         var previous = SearchQuery(); previous.rules = [.init(tag: .init(namespace: "a", name: "sample"))]
         let parsed = try SearchInputParser.parse("artist:sample ~lang:english", preserving: previous)

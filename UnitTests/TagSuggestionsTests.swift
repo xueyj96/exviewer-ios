@@ -3,6 +3,49 @@ import ExViewerCore
 @testable import ExViewer
 
 final class TagSuggestionsTests: XCTestCase {
+    func testSuggestionAndExactRequestsIgnoreCaseAndOuterWhitespace() {
+        XCTAssertEqual(TagSuggestionRequest.text(prefix: " EnGLISh ", namespace: " ALL "), "english")
+        XCTAssertEqual(TagSuggestionRequest.text(prefix: " GLI ", namespace: " LANGUAGE "), "language:gli")
+        XCTAssertEqual(TagSuggestionRequest.exactText(for: .init(namespace: "LANGUAGE", name: "EnGLISh")), "language:english$")
+        let item = TagSuggestion(tag: .init(namespace: "language", name: "English"), source: .site, chineseName: nil, relatedMaster: nil)
+        XCTAssertEqual(TagSuggestionRequest.matching([item], namespace: " LANGUAGE "), [item])
+    }
+
+    func testLocalMixedCaseFragmentsKeepOriginalNamesAndChineseTranslations() {
+        let catalog = TagTranslationCatalog(version: "fixture", source: "test", commit: "fixture", license: "test", updatedAt: nil,
+                                            namespaces: ["language": ["English": "英语"], "artist": ["Sample Artist": "样例作者"]])
+        for text in ["GLI", "gli", "gLi"] {
+            let matches = catalog.matches(text, namespace: "LANGUAGE")
+            XCTAssertEqual(matches.map(\.tag.name), ["English"])
+            XCTAssertEqual(matches.first?.chineseName, "英语")
+            XCTAssertEqual(matches.first?.source, .dictionary)
+        }
+        XCTAssertEqual(catalog.matches("aMpLe", namespace: "all").first?.tag.name, "Sample Artist")
+        XCTAssertEqual(catalog.matches("英语", namespace: "all").first?.tag.name, "English")
+        XCTAssertTrue(catalog.matches("gli", namespace: "artist").isEmpty)
+    }
+
+    @MainActor func testCaseInsensitiveExactCandidateSurvivesMergedPrefixResults() async throws {
+        let artists = Dictionary(uniqueKeysWithValues: (0..<24).map { ("english author \($0)", "样例作者\($0)") })
+        let catalog = TagTranslationCatalog(version: "fixture", source: "test", commit: "fixture", license: "test", updatedAt: nil,
+                                            namespaces: ["language": ["English": "英语"], "artist": artists])
+        let model = TagSuggestionModel(catalog: catalog)
+        model.update(prefix: "EnGLISH", namespace: "all", session: SiteSession(qa: true), qa: true, arguments: ["--qa-tags-offline"])
+        for _ in 0..<100 {
+            if model.items.first?.source == .qaFixture { break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertEqual(model.items.first?.id, "language:english", "An exact tag must not disappear behind 20 alphabetical prefix matches")
+        XCTAssertEqual(model.items.count, 20)
+        XCTAssertEqual(Set(model.items.map(\.id)).count, model.items.count)
+    }
+
+    func testMergedCandidatesRankExactThenPrefixThenInteriorFragment() {
+        let names = ["learn english", "English reader", "ENGLISH"]
+        let items = names.map { TagSuggestion(tag: .init(namespace: "other", name: $0), source: .dictionary, chineseName: nil, relatedMaster: nil) }
+        XCTAssertEqual(TagSuggestionRequest.ranked(items, prefix: "eNgLiSh").map(\.tag.name), ["ENGLISH", "English reader", "learn english"])
+    }
+
     @MainActor func testConcurrentVerificationsStayPacedWhenOneWaiterIsCancelled() async throws {
         let pacer = TagSuggestionPacer(interval: 0.08)
         try await pacer.wait()

@@ -45,14 +45,14 @@ public struct SearchQuery: Codable, Equatable, Sendable {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = value.isEmpty ? [] : (matchPhrase ? [value] : value.split(whereSeparator: \.isWhitespace).map(String.init))
         for keyword in keywords { terms.append((titleOnly ? "title:" : "") + (try quote(keyword))) }
-        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { terms.append("artist:" + (try quote(artist)) + "$") }
+        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { terms.append("artist:" + (try quote(artist.lowercased())) + "$") }
         if !uploader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { terms.append("uploader:" + (try quote(uploader))) }
         var includes = keywords.count + (artist.isEmpty ? 0 : 1)
         var excludes = 0
         for rule in rules {
             guard !rule.tag.name.isEmpty, rule.tag.namespace.allSatisfy({ $0.isASCII && $0.isLetter }) else { throw ViewerError.invalidQuery("请使用 namespace:tag 格式的有效标签。") }
             let prefix = rule.match == .exclude ? "-" : rule.match == .any ? "~" : ""
-            terms.append(prefix + rule.tag.namespace + ":" + (try quote(rule.tag.name)) + "$")
+            terms.append(prefix + rule.tag.namespace.lowercased() + ":" + (try quote(rule.tag.name.lowercased())) + "$")
             if rule.match == .exclude { excludes += 1 } else { includes += 1 }
         }
         guard includes <= 5, excludes <= 10 else { throw ViewerError.invalidQuery("站点每次最多支持 5 个包含条件和 10 个排除条件。") }

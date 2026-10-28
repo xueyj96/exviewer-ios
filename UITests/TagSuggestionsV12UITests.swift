@@ -94,4 +94,17 @@ final class TagSuggestionsV12UITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["parody:pretty rhythm"].exists)
         app.buttons["compose.cancel"].tap()
     }
+
+    func testMixedCaseInteriorFragmentAddsOriginalTagToComposer() {
+        let app = openComposer()
+        let input = app.textFields["tag.name"]
+        input.tap()
+        input.typeText("eTtY cU\n")
+        tapCandidate(app, id: "parody:pretty cure")
+        XCTAssertEqual(input.value as? String, "eTtY cU")
+        XCTAssertEqual(app.buttons["tag.confirm"].label, "完成，1 个标签")
+        app.buttons["tag.confirm"].tap()
+        XCTAssertTrue(app.navigationBars["组合搜索"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["parody:pretty cure"].exists)
+    }
 }

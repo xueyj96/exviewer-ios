@@ -32,10 +32,11 @@ struct TagTranslationCatalog: Decodable, Sendable {
     }
 
     func matches(_ prefix: String, namespace: String, limit: Int = 20) -> [TagSuggestion] {
-        let needle = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        let needle = TagSuggestionRequest.normalized(prefix)
         guard !needle.isEmpty else { return [] }
         guard !Self.currentTaskIsCancelled else { return [] }
-        let selectedNamespaces = namespace == "all" ? namespaces.keys.sorted() : [namespace]
+        let scope = TagSuggestionRequest.normalized(namespace)
+        let selectedNamespaces = namespaces.keys.filter { scope == "all" || TagSuggestionRequest.normalized($0) == scope }.sorted()
         var best: [(score: Int, suggestion: TagSuggestion)] = []
         var visited = 0
         for key in selectedNamespaces {
@@ -43,12 +44,7 @@ struct TagTranslationCatalog: Decodable, Sendable {
             for (raw, chinese) in terms {
                 visited += 1
                 if visited.isMultiple(of: 128), Self.currentTaskIsCancelled { return [] }
-                let rawExact = raw.localizedCaseInsensitiveCompare(needle) == .orderedSame
-                let chineseExact = chinese.localizedCaseInsensitiveCompare(needle) == .orderedSame
-                let rawPrefix = raw.range(of: needle, options: [.anchored, .caseInsensitive]) != nil
-                let chinesePrefix = chinese.range(of: needle, options: [.anchored, .caseInsensitive]) != nil
-                guard rawExact || chineseExact || rawPrefix || chinesePrefix || raw.localizedCaseInsensitiveContains(needle) || chinese.localizedCaseInsensitiveContains(needle) else { continue }
-                let score = rawExact || chineseExact ? 0 : (rawPrefix || chinesePrefix ? 1 : 2)
+                guard let score = TagSuggestionRequest.matchRank(original: raw, chinese: chinese, normalizedPrefix: needle) else { continue }
                 let suggestion = TagSuggestion(tag: GalleryTag(namespace: key, name: raw), source: .dictionary,
                                                chineseName: chinese.isEmpty ? nil : chinese, relatedMaster: nil)
                 let insertion = best.firstIndex {
@@ -123,12 +119,45 @@ struct EHTagSuggestionResponse: Decodable, Sendable {
 enum TagSuggestionRequest {
     static let selectableNamespaces: Set<String> = ["artist", "group", "parody", "character", "language", "cosplayer", "location", "female", "male", "mixed", "other", "reclass"]
 
+    static func normalized(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     static func text(prefix: String, namespace: String) -> String {
-        namespace == "all" ? prefix : "\(namespace):\(prefix)"
+        let prefix = normalized(prefix), namespace = normalized(namespace)
+        return namespace == "all" ? prefix : "\(namespace):\(prefix)"
+    }
+
+    static func exactText(for tag: GalleryTag) -> String {
+        text(prefix: tag.name, namespace: tag.namespace) + "$"
     }
 
     static func matching(_ items: [TagSuggestion], namespace: String) -> [TagSuggestion] {
-        namespace == "all" ? items : items.filter { $0.tag.namespace == namespace }
+        let namespace = normalized(namespace)
+        return namespace == "all" ? items : items.filter { normalized($0.tag.namespace) == namespace }
+    }
+
+    // Keep original names for display and selection. Only matching and wire
+    // requests are folded, so stored tag identities and exact-match rules stay intact.
+    static func matchRank(original: String, chinese: String?, normalizedPrefix needle: String) -> Int? {
+        guard !needle.isEmpty else { return nil }
+        let values = [normalized(original), normalized(chinese ?? "")]
+        if values.contains(needle) { return 0 }
+        if values.contains(where: { $0.hasPrefix(needle) }) { return 1 }
+        return values.contains(where: { $0.contains(needle) }) ? 2 : nil
+    }
+
+    static func ranked(_ items: [TagSuggestion], prefix: String, limit: Int = 20) -> [TagSuggestion] {
+        let needle = normalized(prefix)
+        var scored: [(item: TagSuggestion, score: Int)] = items.map { item in
+            let score = matchRank(original: item.tag.name, chinese: item.chineseName, normalizedPrefix: needle) ?? 3
+            return (item: item, score: score)
+        }
+        scored.sort { left, right in
+            if left.score != right.score { return left.score < right.score }
+            return left.item.id.localizedStandardCompare(right.item.id) == .orderedAscending
+        }
+        return scored.prefix(max(0, limit)).map { $0.item }
     }
 
     static func isSelectable(_ tag: GalleryTag) -> Bool { selectableNamespaces.contains(tag.namespace) }
@@ -197,6 +226,7 @@ enum TagVerification: Equatable {
     let catalog: TagTranslationCatalog?
     private var task: Task<Void, Never>?
     private var generation = UUID()
+    private var currentPrefix = ""
     private var cache: [String: Cached] = [:]
     private var lru: [String] = []
     private let cacheLimit = 128
@@ -210,7 +240,9 @@ enum TagVerification: Equatable {
         task?.cancel()
         generation = UUID()
         let current = generation
-        let prefix = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = TagSuggestionRequest.normalized(raw)
+        let namespace = TagSuggestionRequest.normalized(namespace)
+        currentPrefix = prefix
         items = []
         state = prefix.isEmpty ? .idle : .loading
         guard !prefix.isEmpty else { return }
@@ -244,7 +276,7 @@ enum TagVerification: Equatable {
             }
 
             guard prefix.unicodeScalars.allSatisfy({ $0.isASCII }), Self.safePrefix(prefix) else { return }
-            let key = TagSuggestionRequest.text(prefix: prefix.lowercased(), namespace: namespace)
+            let key = TagSuggestionRequest.text(prefix: prefix, namespace: namespace)
             if let cached = cache[key], Date().timeIntervalSince(cached.date) < cacheTTL {
                 touch(key)
                 merge(cached.items.map { Self.cached($0) }, current: current)
@@ -280,7 +312,7 @@ enum TagVerification: Equatable {
         let revision = session.generation
         do {
             let url = URL(string: "https://api.e-hentai.org/api.php")!
-            let body = try JSONSerialization.data(withJSONObject: ["method": "tagsuggest", "text": "\(tag.namespace):\(tag.name)$"])
+            let body = try JSONSerialization.data(withJSONObject: ["method": "tagsuggest", "text": TagSuggestionRequest.exactText(for: tag)])
             try await waitForNetworkSlot()
             let response = try await session.html(url, method: "POST", body: body, contentType: "application/json")
             try Task.checkCancellation()
@@ -360,7 +392,7 @@ enum TagVerification: Equatable {
         guard expected == generation else { return }
         var unique = Dictionary(items.map { ($0.tag.id, $0) }, uniquingKeysWith: { first, _ in first })
         for item in fresh { unique[item.tag.id] = item }
-        items = unique.values.sorted { $0.tag.id.localizedStandardCompare($1.tag.id) == .orderedAscending }.prefix(suggestionLimit).map { $0 }
+        items = TagSuggestionRequest.ranked(Array(unique.values), prefix: currentPrefix, limit: suggestionLimit)
         state = .ready
     }
 

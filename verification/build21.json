@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "app_version": "0.1.0",
+  "build": "21",
+  "runtime_source_sha256": "1b40a818167ebd107bad71f4ca7a50e68b4a20256b40ce4ec89ecda810d072d7",
+  "runtime_digest_definition": "SHA256 of sorted App/ and Core/Sources/ paths, each path + NUL + fileSHA256 + newline",
+  "change": "Case-insensitive tag lookup, exact verification and wire terms; rank exact, prefix and interior matches before capping merged candidates",
+  "verified_environment": {
+    "xcode": "27.1",
+    "core": "macOS Swift Package tests",
+    "simulator": "iOS27.0"
+  },
+  "core_tests": {
+    "passed": 42,
+    "failed": 0
+  },
+  "focused_native_tests": {
+    "suite": "TagSuggestionsTests",
+    "passed": 14,
+    "failed": 0
+  },
+  "focused_ui_tests": {
+    "suite": "TagSuggestionsV12UITests",
+    "passed": 3,
+    "failed": 0,
+    "cases": [
+      "testSamePrefixCanSelectTwoCandidatesThenCompleteToComposerDraft",
+      "testCancelAfterSamePrefixMultiSelectLeavesComposerDraftEmpty",
+      "testMixedCaseInteriorFragmentAddsOriginalTagToComposer"
+    ]
+  },
+  "release_build": "PASSED_generic_iOS_arm64",
+  "public_IPA_requires_personal_re_signing": true,
+  "physical_installation": "NOT_PERFORMED_FOR_BUILD21",
+  "real_site_account_acceptance": "NOT_EXERCISED_FOR_BUILD21",
+  "preserved_limits": [
+    "Original failed compiler attempt retained locally; final source compiled and passed the listed checks.",
+    "UI tests used neutral offline QA data, not real account/site responses.",
+    "No storage schema migration or existing manual-download changes."
+  ]
+}

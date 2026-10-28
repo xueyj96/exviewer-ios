@@ -290,7 +290,7 @@ struct TagEntryView: View {
                         .autocorrectionDisabled().textInputAutocapitalization(.never)
                         .accessibilityIdentifier("tag.name")
                         .focused($editingText).submitLabel(.done).onSubmit { editingText = false }
-                        .accessibilityHint("中文只在本地词库匹配；英文前缀向 E-Hentai 请求标签候选。")
+                        .accessibilityHint("标签查找忽略大小写，支持输入名称片段。中文在本地词库匹配；英文另请求站点前缀候选。")
                     Picker("匹配方式", selection: $match) {
                         ForEach(TagMatch.allCases, id: \.self) { Text($0.name).tag($0) }
                     }
