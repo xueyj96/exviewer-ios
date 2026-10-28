@@ -305,6 +305,46 @@ final class ChromeV17UITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["detail.actions"].firstMatch.waitForExistence(timeout: 6))
     }
 
+    func testMinimumRatingSearchKeepsExactThresholdAndExcludesLowerDecimalRatings() {
+        continueAfterFailure = false
+        let app = launch(["--qa-rating-filter", "--qa-tags-offline"])
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        XCTAssertTrue(app.buttons["gallery.open.1"].exists)
+        app.buttons["discover.search-entry"].tap(); app.buttons["compose.filters"].tap()
+        let picker = app.buttons["compose.min-rating"]
+        for _ in 0..<7 { if picker.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(picker.isHittable); picker.tap()
+        let three = app.buttons["3 星"]; XCTAssertTrue(three.waitForExistence(timeout: 5)); three.tap()
+        app.buttons["BackButton"].tap(); app.buttons["compose.apply"].tap()
+        XCTAssertTrue(app.buttons["gallery.open.3"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["gallery.open.4"].exists)
+        XCTAssertFalse(app.buttons["gallery.open.1"].exists, "2.8 must be excluded")
+        XCTAssertFalse(app.buttons["gallery.open.2"].exists, "2.9 must be excluded")
+    }
+
+    func testDetailLinksUseCompactRowsInLightAndDark() {
+        continueAfterFailure = false
+        for arguments in [["--qa-detail-actions"], ["--qa-detail-actions", "--qa-dark", "--qa-large-type"]] {
+            let app = launch(arguments)
+            let card = app.buttons["gallery.open.1"]
+            XCTAssertTrue(card.waitForExistence(timeout: 12)); card.tap()
+            let site = app.buttons["detail.site-page"], archive = app.buttons["detail.archive"]
+            let tabs = app.descendants(matching: .any)["main.tabs.compact"].firstMatch
+            for _ in 0..<5 {
+                if archive.exists && archive.frame.maxY < tabs.frame.minY - 8 { break }
+                app.swipeUp()
+            }
+            XCTAssertTrue(site.exists); XCTAssertTrue(archive.exists)
+            XCTAssertLessThan(archive.frame.maxY, tabs.frame.minY - 8, "Both rows must be scrollable fully above the floating tabs")
+            XCTAssertTrue(site.label.contains("查看完整画廊信息")); XCTAssertTrue(archive.label.contains("查看下载选项与费用"))
+            XCTAssertEqual(site.frame.minX, archive.frame.minX, accuracy: 1)
+            XCTAssertEqual(site.frame.width, archive.frame.width, accuracy: 1)
+            XCTAssertGreaterThanOrEqual(site.frame.height, 44); XCTAssertGreaterThanOrEqual(archive.frame.height, 44)
+            let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = arguments.count == 1 ? "build27.detail-links.light" : "build27.detail-links.dark-large"
+            shot.lifetime = .keepAlways; add(shot); app.terminate()
+        }
+    }
+
     private func launch(_ arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--qa"] + arguments

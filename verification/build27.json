@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0",
+  "build": "27",
+  "runtime_source_sha256": "7740e31689b4b04dc20713b0041a4ba518d0b96efed51d351a557fd9bc1e6ef7",
+  "changes": [
+    "Strict unrounded API-average minimum rating filter on every published batch and continuation",
+    "Unknown averages preserve confirmed matches and report incomplete response; no fallback to sprite-derived ratings",
+    "Rating-filter cache namespace refreshed while other feed caches retain their keys",
+    "Detail site-page andarchive actions use compact native rows; existing in-app official-page handlers retained",
+    "Build26 full-width page-limit separators retained"
+  ],
+  "core": {
+    "passed": 46,
+    "failed": 0
+  },
+  "native": {
+    "passed": 24,
+    "failed": 0,
+    "scope": [
+      "GalleryPagerTests",
+      "FeedSnapshotCacheTests",
+      "DiscoveryNavigationTests"
+    ]
+  },
+  "UI": {
+    "passed": 3,
+    "failed": 0,
+    "xcresult": "QA/Simulator-20261028T183848Z.xcresult",
+    "detail_scroll_clearance_recheck": {
+      "passed": 1,
+      "failed": 0,
+      "xcresult": "QA/Simulator-20261028T184249Z.xcresult",
+      "same_production_runtime": true
+    }
+  },
+  "release_build": "PASSED",
+  "request_concurrency_and_rate_limits": "UNCHANGED",
+  "real_account_site_filter_acceptance": "NOT_EXERCISED",
+  "phone_UI_acceptance": "NOT_EXERCISED"
+}

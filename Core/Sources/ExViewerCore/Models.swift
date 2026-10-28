@@ -110,7 +110,7 @@ public enum KeychainOperation: String, Equatable, Sendable {
 
 public enum ViewerError: Error, LocalizedError, Equatable, Sendable {
     case invalidQuery(String), authentication, challenge, imageLimit, restricted, layoutChanged, network, tooLarge, unsupported, storage, stale
-    case keychain(KeychainOperation, Int32), sessionRecord
+    case keychain(KeychainOperation, Int32), sessionRecord, ratingUnavailable
     public var errorDescription: String? {
         switch self {
         case .invalidQuery(let reason): return reason
@@ -120,6 +120,7 @@ public enum ViewerError: Error, LocalizedError, Equatable, Sendable {
         case .restricted: return "站点暂时拒绝了访问，请检查账号权限或稍后重试。"
         case .layoutChanged: return "站点返回格式暂时无法识别，已有内容保留。可以打开原网页检查。"
         case .network: return "网络请求失败，已有内容保留，请重试。"
+        case .ratingUnavailable: return "部分画廊的平均评分未能确认，已保留符合条件的结果，请重试。"
         case .tooLarge: return "文件超过本机单项大小或可用空间限制。"
         case .unsupported: return "当前文件无法解码，请检查站点原图。"
         case .storage: return "本机文件保存失败，请检查可用空间后重试。"

@@ -201,4 +201,42 @@ import ExViewerCore
         XCTAssertEqual(searchURLs, [feed, feed, cursor], "The parsed next URL is followed only after page one succeeds")
         XCTAssertNil(pager.next)
     }
+
+    func testLegacyRatingCacheIsIgnoredWhileUnfilteredSnapshotRemainsReadable() async throws {
+        let root = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var query = SearchQuery(); query.minRating = 3
+        let filtered = try query.url(site: .ex)
+        let plain = GallerySite.ex.baseURL
+        var legacy = gallery(.ex, gid: 1, title: "Untrusted sprite average"); legacy.rating = 5
+        for feed in [filtered, plain] {
+            let stored = FeedSnapshot(owner: "guest", root: feed, items: [legacy], next: nil, categories: [:])
+            try JSONEncoder().encode(stored).write(to: diskFile(root: root, owner: "guest", url: feed))
+        }
+        let cache = FeedSnapshotCache(root: root)
+        let oldFiltered = await cache.read(owner: "guest", url: filtered)
+        let unfiltered = await cache.read(owner: "guest", url: plain)
+        XCTAssertNil(oldFiltered); XCTAssertEqual(unfiltered?.items.first?.rating, 5)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: try diskFile(root: root, owner: "guest", url: filtered).path))
+
+        legacy.rating = 3
+        await cache.save(.init(owner: "guest", root: filtered, items: [legacy], next: nil, categories: [:]), expectedEpoch: 0)
+        let refreshed = await FeedSnapshotCache(root: root).read(owner: "guest", url: filtered)
+        XCTAssertEqual(refreshed?.items.first?.rating, 3)
+    }
+
+    func testRatingFilteredCacheRejectsBelowThresholdAndUnknownAverages() async throws {
+        let root = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var query = SearchQuery(); query.minRating = 3
+        let filtered = try query.url(site: .ex)
+        let cache = FeedSnapshotCache(root: root)
+        let ratings: [Double?] = [2.8, 2.9, 2.999, nil]
+        for rating in ratings {
+            var value = gallery(.ex, gid: 1, title: "Neutral"); value.rating = rating
+            await cache.save(.init(owner: "guest", root: filtered, items: [value], next: nil, categories: [:]), expectedEpoch: 0)
+            let result = await cache.read(owner: "guest", url: filtered)
+            XCTAssertNil(result)
+        }
+    }
 }

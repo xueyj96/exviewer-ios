@@ -410,7 +410,7 @@ struct DiscoveryComposerView: View {
                 Section("评分、页数与上传者") {
                         Picker("最低评分", selection: Binding(get: { draftQuery.minRating ?? 0 }, set: { draftQuery.minRating = $0 == 0 ? nil : $0 })) {
                             Text("不限").tag(0); ForEach(2...5, id: \.self) { Text("\($0) 星").tag($0) }
-                        }
+                        }.accessibilityIdentifier("compose.min-rating")
                         LabeledContent("最少页数") {
                             TextField("不限", text: $minimumPagesText).keyboardType(.numberPad)
                                 .multilineTextAlignment(.trailing).accessibilityLabel("最少页数")

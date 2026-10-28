@@ -1108,9 +1108,17 @@ struct GalleryDetailView: View {
                         }
                     }
                 }
-                Divider()
-                Button("打开站点原网页") { web = .init(title: "画廊原网页", url: current.ref.url) }.disabled(AppMode.qa)
-                if let archive = detail?.archive { Button("归档下载与费用") { web = .init(title: "归档下载", url: archive) } }
+                VStack(spacing: 0) {
+                    detailLink(title: "站点原页", subtitle: "查看完整画廊信息", icon: "safari", identifier: "detail.site-page") {
+                        web = .init(title: "画廊原网页", url: current.ref.url)
+                    }
+                    if let archive = detail?.archive {
+                        Divider().padding(.leading, 50)
+                        detailLink(title: "归档下载", subtitle: "查看下载选项与费用", icon: "archivebox", identifier: "detail.archive") {
+                            web = .init(title: "归档下载", url: archive)
+                        }
+                    }
+                }.background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
                 Text("当前画质下载会使用看图额度。归档价格和免费配额以站点当前账号页面为准。").font(.caption).foregroundStyle(.secondary)
             }.padding(22)
         }.navigationTitle("画廊详情").navigationBarTitleDisplayMode(.inline).appNavigationChrome(backButton: true)
@@ -1118,6 +1126,19 @@ struct GalleryDetailView: View {
             .accessibilityHidden(reader)
             .fullScreenCover(isPresented: $reader) { ReaderView(gallery: current) }
             .sheet(item: $web, onDismiss: { Task { await load() } }) { OfficialWebView(destination: $0) }
+    }
+    private func detailLink(title: String, subtitle: String, icon: String, identifier: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.body).foregroundStyle(.secondary).frame(width: 22)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }.fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 10).contentShape(Rectangle())
+        }.buttonStyle(.plain).disabled(AppMode.qa).accessibilityIdentifier(identifier)
     }
     private func load() async {
         if AppMode.qa { detail = QASamples.detail(gallery); return }

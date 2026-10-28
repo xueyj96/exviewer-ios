@@ -63,10 +63,9 @@ public enum EHParser {
             let cover = url(raw, base: base).flatMap { URLPolicy.media($0) ? $0 : nil }
             let rowText = try row.text()
             let pages = match(rowText, #"(\d+)\s+pages?"#).flatMap(Int.init)
-            let ratingStyle = attr(try row.select(".ir").first(), "style")
-            let x = match(ratingStyle, #"(-?\d+)px\s+(-?\d+)px"#).flatMap(Double.init)
-            let rating = x.map { max(0, min(5, 5 - abs($0) / 16)) }
-            items.append(Gallery(ref: ref, title: try title.text(), category: text(row, ".cn, .cs, .ct"), uploader: text(row, "a[href*=uploader]"), pages: pages, rating: rating, tags: try tags(row), cover: cover))
+            // The star sprite may represent a personal vote, not the average.
+            // GalleryMetadata supplies the precise numeric average.
+            items.append(Gallery(ref: ref, title: try title.text(), category: text(row, ".cn, .cs, .ct"), uploader: text(row, "a[href*=uploader]"), pages: pages, tags: try tags(row), cover: cover))
         }
         if items.isEmpty {
             let body = try document.text().lowercased()

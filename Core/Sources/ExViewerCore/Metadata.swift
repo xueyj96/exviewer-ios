@@ -31,7 +31,7 @@ public enum GalleryMetadata {
             if let category = entry.category { value.category = category }
             if let uploader = entry.uploader { value.uploader = uploader }
             if let count = entry.filecount.flatMap(Int.init) { value.pages = count }
-            if let rating = entry.rating.flatMap(Double.init) { value.rating = rating }
+            value.rating = GalleryRatingFilter.average(entry.rating.flatMap(Double.init))
             if let tags = entry.tags { value.tags = tags.compactMap(GalleryTag.init); value.tagsComplete = true }
             if let thumb = entry.thumb, URLPolicy.media(thumb) { value.cover = thumb }
             return value

@@ -19,6 +19,7 @@ import ExViewerCore
     private var retryURL: URL?
     private var activeURL: URL?
     private var activePriority: SearchRequestPriority = .foreground
+    private var minimumRating: Int? { root.flatMap(GalleryRatingFilter.minimum(in:)) }
     private var cacheEpoch = 0
     private let cache: FeedSnapshotCache?
     private let loadHTML: ((URL, Bool, Data?) async throws -> String)?
@@ -74,7 +75,7 @@ import ExViewerCore
         items = retained; if retained.isEmpty { categories = [:]; cachedAt = nil }
         sourceOwner = session.owner; sourceGeneration = session.generation; interrupted = false
         if self.qa {
-            items = QASamples.feedGalleries; categories = ["0": "常用", "1": "稍后阅读"]
+            items = QASamples.feedGalleries.filter { GalleryRatingFilter.includes($0, minimum: minimumRating) }; categories = ["0": "常用", "1": "稍后阅读"]
             next = URL(string: "https://exhentai.org/?qa-page=2"); return
         }
         let current = context, account = session.generation, owner = session.owner
@@ -99,7 +100,7 @@ import ExViewerCore
             task = Task {
                 try? await Task.sleep(nanoseconds: 150_000_000)
                 guard !Task.isCancelled, current == context else { return }
-                items += QASamples.additionalGalleries; self.next = nil; loading = false; interrupted = false
+                items += QASamples.additionalGalleries.filter { GalleryRatingFilter.includes($0, minimum: minimumRating) }; self.next = nil; loading = false; interrupted = false
             }
         } else { beginPage(next, session: session, priority: prefetch ? .prefetch : .foreground) }
     }
@@ -135,6 +136,9 @@ import ExViewerCore
             guard isCurrent(current, account: account, owner: owner, session: session), !Task.isCancelled else { return }
             let replacingRoot = url == root
             let retainedRoot = replacingRoot && !items.isEmpty
+            // Continuation URLs may omit filters; keep the original query's threshold.
+            let minimum = minimumRating
+            var unconfirmedRatings = false
             var pageItems: [Gallery] = []
             var positions = Dictionary(uniqueKeysWithValues: items.enumerated().map { ($0.element.id, $0.offset) })
             categories = list.favoriteCategories
@@ -148,13 +152,20 @@ import ExViewerCore
                     let parse = Task.detached(priority: .userInitiated) { try GalleryMetadata.merge(Data(json.utf8), into: batch) }
                     enriched = try await withTaskCancellationHandler(operation: { try await parse.value }, onCancel: { parse.cancel() })
                 } catch is CancellationError { throw CancellationError() }
-                catch { enriched = batch }
+                catch {
+                    if minimum != nil { throw error }
+                    enriched = batch
+                }
                 try Task.checkCancellation()
                 guard isCurrent(current, account: account, owner: owner, session: session) else { return }
-                pageItems += enriched
+                if minimum != nil, enriched.contains(where: { GalleryRatingFilter.average($0.rating) == nil }) {
+                    unconfirmedRatings = true
+                }
+                let accepted = enriched.filter { GalleryRatingFilter.includes($0, minimum: minimum) }
+                pageItems += accepted
                 if !retainedRoot {
                     var updated = items
-                    for gallery in enriched {
+                    for gallery in accepted {
                         if let index = positions[gallery.id] {
                             if !updated[index].tagsComplete && gallery.tagsComplete { updated[index] = gallery }
                         } else { positions[gallery.id] = updated.count; updated.append(gallery) }
@@ -165,6 +176,7 @@ import ExViewerCore
             }
             try Task.checkCancellation()
             guard isCurrent(current, account: account, owner: owner, session: session) else { return }
+            if unconfirmedRatings { throw ViewerError.ratingUnavailable }
             if replacingRoot { items = pageItems; cachedAt = nil }
             loaded.insert(url); retryURL = nil
             next = list.next.flatMap { loaded.contains($0) ? nil : $0 }

@@ -13,10 +13,14 @@ enum QASamples {
                 if index == 2 { gallery.title = "缺少元数据"; gallery.category = ""; gallery.pages = nil }
             }
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-reader-many") { gallery.pages = 12 }
+            if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-rating-filter") { gallery.rating = [2.8, 2.9, 3.0, 4.75][index] }
             return gallery
         }
     }
-    static func detail(_ gallery: Gallery) -> GalleryDetail { GalleryDetail(gallery: gallery, pages: pages, next: nil, archive: nil, favoriteName: nil) }
+    static func detail(_ gallery: Gallery) -> GalleryDetail {
+        let archive = AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-detail-actions") ? GallerySite.ex.baseURL.appendingPathComponent("archiver.php") : nil
+        return GalleryDetail(gallery: gallery, pages: pages, next: nil, archive: archive, favoriteName: nil)
+    }
     static var additionalGalleries: [Gallery] {
         Array(galleries.prefix(2)).enumerated().map { index, source in
             var gallery = source; gallery.ref.gid += 100; gallery.title = index == 0 ? "第二批 · 山间笔记" : "第二批 · 色彩练习"; return gallery

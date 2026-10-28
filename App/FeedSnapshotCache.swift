@@ -33,7 +33,10 @@ actor FeedSnapshotCache {
     }
     func epoch(owner: String) -> Int { epochs[owner, default: 0] }
     private func key(owner: String, url: URL) -> String {
-        SHA256.hash(data: Data((owner + "\n" + url.absoluteString).utf8)).map { String(format: "%02x", $0) }.joined()
+        // Old rating-filtered snapshots can contain sprite-derived values. Only
+        // those queries get a fresh namespace; all other cached feeds stay usable.
+        let version = GalleryRatingFilter.minimum(in: url) == nil ? "" : "strict-average-rating-v1\n"
+        return SHA256.hash(data: Data((version + owner + "\n" + url.absoluteString).utf8)).map { String(format: "%02x", $0) }.joined()
     }
     private func validOwner(_ owner: String) -> Bool {
         owner == "guest" || (!owner.isEmpty && owner.count <= 64 && owner.allSatisfy(\.isHexDigit))
@@ -43,7 +46,10 @@ actor FeedSnapshotCache {
               URLPolicy.account(url), let site = GallerySite.allCases.first(where: { $0.host == url.host }),
               snapshot.next.map({ URLPolicy.continuation($0, from: url) }) ?? true else { return false }
         return Set(snapshot.items.map(\.id)).count == snapshot.items.count &&
-            snapshot.items.allSatisfy { $0.ref.site == site && ($0.cover.map(URLPolicy.media) ?? true) }
+            snapshot.items.allSatisfy {
+                $0.ref.site == site && ($0.cover.map(URLPolicy.media) ?? true) &&
+                GalleryRatingFilter.includes($0, minimum: GalleryRatingFilter.minimum(in: url))
+            }
     }
     func read(owner: String, url: URL) -> FeedSnapshot? {
         guard validOwner(owner) else { return nil }
