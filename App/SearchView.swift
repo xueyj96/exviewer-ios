@@ -411,15 +411,24 @@ struct DiscoveryComposerView: View {
                         Picker("最低评分", selection: Binding(get: { draftQuery.minRating ?? 0 }, set: { draftQuery.minRating = $0 == 0 ? nil : $0 })) {
                             Text("不限").tag(0); ForEach(2...5, id: \.self) { Text("\($0) 星").tag($0) }
                         }
-                        HStack {
-                            TextField("最少页数", text: $minimumPagesText).keyboardType(.numberPad).accessibilityIdentifier("compose.min-pages")
-                            Text("—").foregroundStyle(.secondary)
-                            TextField("最多页数", text: $maximumPagesText).keyboardType(.numberPad).accessibilityIdentifier("compose.max-pages")
+                        LabeledContent("最少页数") {
+                            TextField("不限", text: $minimumPagesText).keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing).accessibilityLabel("最少页数")
+                                .accessibilityIdentifier("compose.min-pages")
                         }
+                        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+                        .alignmentGuide(.listRowSeparatorTrailing) { $0[.trailing] }
+                        LabeledContent("最多页数") {
+                            TextField("不限", text: $maximumPagesText).keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing).accessibilityLabel("最多页数")
+                                .accessibilityIdentifier("compose.max-pages")
+                        }
+                        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+                        .alignmentGuide(.listRowSeparatorTrailing) { $0[.trailing] }
                         TextField("上传者 uploader（可选）", text: $draftQuery.uploader).autocorrectionDisabled().textInputAutocapitalization(.never).accessibilityIdentifier("compose.uploader")
                         Toggle("必须有 torrent", isOn: $draftQuery.requireTorrent)
                         if let warning = draftQuery.pageRangeWarning { Text(warning).font(.caption).foregroundStyle(.secondary) }
-                }.accessibilityIdentifier("compose.advanced")
+                }
 
         }
         .scrollDismissesKeyboard(.interactively)

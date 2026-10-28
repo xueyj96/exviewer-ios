@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-28T18:19:08.914960+00:00",
+  "version": "0.1.0",
+  "build": "26",
+  "runtime_source_sha256": "cdc6acfbe2cc3ce1a455a086c655f31b26c80fc4b5e31d53bda0a020fbc60c43",
+  "change": "Replace inline page-range fields anddash with two native labeled rows;explicit full-width separator alignment;restore unique page-field accessibility identifiers",
+  "query_and_storage_semantics": "UNCHANGED",
+  "focused_UI": {
+    "passed": 1,
+    "failed": 0,
+    "case": "ChromeV17UITests.testFilterPageKeepsDraftAndEditsInlineTagsWithoutExecuting",
+    "xcresult": "QA/Simulator-20261028T181620Z.xcresult"
+  },
+  "verified": [
+    "Blank rows show separate minimum/maximum labels andNo limit placeholders",
+    "Both row separators align to full content width in actual screenshots",
+    "Minimum40 andmaximum100 enter,submit,andreopen correctly",
+    "Inline tag removal,draft navigation,andcancel retain prior semantics"
+  ],
+  "visual_evidence": [
+    "QA/page-range26/attachments/83493108-6C4A-430C-B829-7775769451CC.png",
+    "QA/page-range26/attachments/6CB8E4F4-0E8D-44C9-AE1E-428C9022951E.png"
+  ],
+  "native_tests": "NOT_RERUN_PRESENTATION_ONLY_CHANGE",
+  "release_build": "PASSED",
+  "phone_UI_acceptance": "NOT_EXERCISED",
+  "public_IPA_requires_personal_re_signing": true
+}

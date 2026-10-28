@@ -194,12 +194,17 @@ final class ChromeV17UITests: XCTestCase {
         XCTAssertTrue((filters.value as? String)?.contains("language:english") == true)
         XCTAssertFalse((filters.value as? String)?.contains("other:city") == true)
         filters.tap(); XCTAssertEqual(artist.value as? String, "sample")
-        let minimum = app.textFields.matching(NSPredicate(format: "placeholderValue == %@", "最少页数")).firstMatch
+        let minimum = app.textFields["compose.min-pages"]
         for _ in 0..<7 { if minimum.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(minimum.isHittable); minimum.tap(); minimum.typeText("40")
-        let maximum = app.textFields.matching(NSPredicate(format: "placeholderValue == %@", "最多页数")).firstMatch
-        print("SEARCH25_FIELDS minimum=\(minimum.identifier),maximum=\(maximum.identifier)")
+        XCTAssertTrue(minimum.isHittable)
+        let maximum = app.textFields["compose.max-pages"]
+        for _ in 0..<3 { if maximum.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(maximum.isHittable)
+        let blank = XCTAttachment(screenshot: app.screenshot()); blank.name = "build26.page-range.blank"; blank.lifetime = .keepAlways; add(blank)
+        minimum.tap(); minimum.typeText("40")
+        for _ in 0..<3 { if maximum.isHittable { break }; app.swipeUp() }
         maximum.tap(); maximum.typeText("100")
+        let filled = XCTAttachment(screenshot: app.screenshot()); filled.name = "build26.page-range.filled"; filled.lifetime = .keepAlways; add(filled)
         app.buttons["BackButton"].tap()
         XCTAssertTrue((filters.value as? String)?.contains("40–100页") == true)
         app.buttons["compose.apply"].tap()
