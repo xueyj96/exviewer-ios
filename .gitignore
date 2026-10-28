@@ -1,0 +1,33 @@
+.build/
+build/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+# Local build, delivery, and diagnostic artifacts.
+/QA/
+/versions/
+/DerivedData/
+**/project.xcworkspace/
+*.xcresult/
+*.app/
+*.dSYM/
+*.ipa
+*.log
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Local credentials and signing material are never repository content.
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+*.pem
+*.key
+*.cer
+.credentials/
+.ssh/

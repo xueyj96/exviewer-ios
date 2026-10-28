@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ExViewer · 设计原型</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="studio" aria-label="ExViewer 设计原型台">
+    <header class="studio-head">
+      <div class="studio-brand"><span class="brand-mark">E</span><div><strong>ExViewer</strong><small>交互设计稿 · 02</small></div></div>
+      <div class="studio-controls">
+        <label class="control-label" for="screenPicker">画面</label>
+        <select id="screenPicker" aria-label="选择设计画面">
+          <option value="discover">发现</option><option value="search">组合搜索</option><option value="detail">详情</option>
+          <option value="reader">阅读</option><option value="library">资料库</option><option value="account">账号</option>
+        </select>
+        <button class="studio-toggle" id="themeToggle" type="button" aria-label="切换浅色或深色"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor"/><path d="M10 3a7 7 0 0 1 0 14Z" fill="currentColor"/></svg><span>浅色</span></button>
+        <button class="studio-toggle" id="textSizeToggle" type="button" aria-label="切换标准或大字号">A+</button>
+        <label class="state-control"><span>状态</span><select id="networkPicker" aria-label="选择内容加载状态"><option value="normal">正常加载</option><option value="loading">加载中</option><option value="failure">局部失败</option></select></label>
+        <a class="overview-link" href="overview.html">六页总览</a>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="phone-wrap">
+        <div class="phone" id="phone" data-theme="light">
+          <div class="status-bar"><span>9:41</span><span class="status-icons"><i></i><i></i><b></b></span></div>
+          <div class="app" id="app" aria-live="polite"></div>
+          <div class="home-indicator"><span></span></div>
+        </div>
+      </div>
+      <aside class="design-note">
+        <p class="eyebrow">设计意图</p>
+        <h1 id="noteTitle">封面先行的发现页</h1>
+        <p id="noteBody">入口收紧到标题、站点和一条搜索栏；内容从首屏开始，以封面建立浏览节奏。</p>
+        <div class="note-rule"></div>
+        <p class="sample-note"><span class="sample-dot"></span>样例作品与数值仅用于设计</p>
+        <div class="stage-hint"><span>390 × 844</span><span>本地交互原型</span></div>
+      </aside>
+    </section>
+    <footer class="studio-foot"><span>原创界面构想</span><span>仅设计样例 · 不连接真实账号或服务</span></footer>
+  </main>
+</body>
+</html>

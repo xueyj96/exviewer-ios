@@ -1,0 +1,52 @@
+{
+  "type": "ORIGINAL_INTERACTIVE_UI_DESIGN_PROTOTYPE",
+  "native_ui_implemented": false,
+  "files": {
+    "README.md": "7a6363cce8b54657afcff7295930c44dc06ceca7afff987d937c1dd70d28342e",
+    "app.js": "50b989588641ec229e898f2a75b1e661c1006bdbdbf9ae8b037798d7d9798d36",
+    "artwork/coast.svg": "f5ca0fe66c1b163eadf8e8b389af01dd20c32ac04eb512d95fc434f184eae406",
+    "artwork/garden.svg": "aee367a8bb3bd7638d94f3f080368e7e28f6205247bdf13a1796601aca3c7c89",
+    "artwork/letter.svg": "f5d4282d99511c30772e1cf1c968939657f6ac64356a56ec810dab4e235446b5",
+    "artwork/night.svg": "4999b74be493de1b246abada5c9085cc74cc4218ec03d5cc8ccf69b9e25cc004",
+    "artwork/rain.svg": "61bb56767b2f5872f539746f9634f81cfd5324b878c5aacf12ef484b70bbab63",
+    "artwork/walk.svg": "ee9c1dde46edea328e69f10d95e5709a4f511c4caa3d113c8e69ddbc4d33b1b5",
+    "index.html": "1a92567e54a810f61d33bfb49cf1c5f04b9f09a488c95abfd36a6e63ccf207f4",
+    "overview.html": "b1811ec51d9f3fa0c3acbbb4c6c3f79a74364fe187ed7c1a277db255b178b13a",
+    "style.css": "a1b7152ad878473fee2ecf1e2de66527f036b15e172109cbafee9a16649e6f9f"
+  },
+  "preview": "http://127.0.0.1:8793/overview.html",
+  "images": "Original neutral SVG artwork, no account data",
+  "checks": {
+    "js_syntax": "PASS",
+    "browser_errors_observed": 0,
+    "flows": [
+      "mixed all/any/exclude tags",
+      "save and execute a search from library",
+      "download pause/resume",
+      "single-cover retry without clearing successful covers",
+      "gallery to reader, page change and thumbnail controls",
+      "account management sheet",
+      "draft inputs survive filter group changes",
+      "filter-only search exposes save action"
+    ],
+    "responsive": {
+      "width": 360,
+      "horizontal_document_width": 360,
+      "phone_width": 360,
+      "text_scale": 1.22,
+      "theme": "dark",
+      "status": "VISUALLY_AND_DOM_CHECKED"
+    },
+    "desktop_overview": {
+      "viewport_width": 1280,
+      "document_width": 1280,
+      "columns": 3,
+      "screens": 6,
+      "status": "DOM_AND_SCREENSHOT_CHECKED"
+    }
+  },
+  "independent_review": {
+    "status": "TWO_FINDINGS_FIXED_AND_READ_ONLY_RECHECKED",
+    "final_app_js_sha256": "50b989588641ec229e898f2a75b1e661c1006bdbdbf9ae8b037798d7d9798d36"
+  }
+}

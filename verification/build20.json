@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "app_version": "0.1.0",
+  "build": "20",
+  "runtime_source_sha256": "a8b897561d315c567cfff743f324b20639b4ca80e788d5bb4ba3389fc848e92d",
+  "runtime_digest_definition": "SHA256 of sorted App/ and Core/Sources/ paths, each path + NUL + fileSHA256 + newline",
+  "compiled_source_counts": {
+    "app": 40,
+    "native_tests": 25,
+    "ui_tests": 24
+  },
+  "verified_environment": {
+    "xcode": "27.1",
+    "simulator": "iOS27.0"
+  },
+  "native_tests": {
+    "passed": 136,
+    "failed": 0
+  },
+  "focused_ui_tests": {
+    "passed": 3,
+    "failed": 0,
+    "cases": [
+      "FlatChromeV19UITests.testFlatBackKeepsInteractivePopAndCanBeReentered",
+      "ToolbarTextV20UITests.testCancelAndAdjacentActionsStayHorizontalInAllSearchSheets",
+      "TagSuggestionsV12UITests.testSamePrefixCanSelectTwoCandidatesThenCompleteToComposerDraft"
+    ]
+  },
+  "phone_installation": {
+    "version": "0.1.0(20)",
+    "one_original_signed_overlay": true,
+    "independent_version_readback": true,
+    "physical_UI_acceptance": "NOT_EXERCISED"
+  },
+  "preserved_limits": [
+    "Earlier unsuccessful runs are retained in local QA; only the listed current-source cases establish this result.",
+    "Simulator results do not prove physical frame rate,real-site speed,or actual favorites mutations."
+  ],
+  "repository_scope": "Source,assets,and a bounded verification summary; no login data,raw phone diagnostics,signing certificates,or install packages."
+}

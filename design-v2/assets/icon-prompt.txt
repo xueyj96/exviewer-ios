@@ -1,0 +1,7 @@
+Mode: built-in image_gen edit; not CLI.
+Target: approved panda/book raster image from this conversation.
+Prompt:
+Use case: precise-object-edit. Edit target: the attached approved panda/book app icon. Preserve the exact abstract panda mark (small white face, two black ears, two black eye patches only, no eyes or body), its relative position, the soft bamboo green color palette, and the central V notch of the white page band. Change only framing: remove the outer darker-green background frame and remove the inset rounded rectangular card. Expand the lighter green cover field fully to all top and side edges and all upper corners of the square. Expand the off-white page band fully to both side edges and to the entire bottom edge and both bottom corners. No green strip beneath the white band. No rounded corners drawn anywhere on the outer boundary. It must be a single full-bleed opaque square 1024x1024 iOS app icon master, not an icon mockup. The operating system will apply its one corner mask. Absolutely no border, outer margin, inset square, shadow, raised card, duplicated edge, transparency, text, or extra decorations. Keep the same simple abstract panda printed on a green book cover.
+
+Generated source: app-icon-master.png, 1254 x 1254, opaque.
+Asset export: sips resampling to 1024 x 1024, no design edits or corner masking; App/Assets.xcassets/AppIcon.appiconset/AppIcon.png.
