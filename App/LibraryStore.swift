@@ -201,9 +201,23 @@ private struct RecentSearchFile: Codable {
 
 enum SearchPresentation {
     static func summary(_ query: SearchQuery, site: GallerySite) -> String {
-        var values = [site == .ex ? "EX" : "EH"]
+        let scope = site == .ex ? "EX" : "EH"
+        let detail = conditions(query)
+        return detail.isEmpty ? scope : "\(scope) · \(detail)"
+    }
+
+    static func recordTitle(_ query: SearchQuery) -> String {
+        if !query.text.isEmpty { return query.text }
+        if !query.artist.isEmpty { return "作者 \(query.artist)" }
+        if let rule = query.rules.first { return "\(rule.match.name) \(rule.tag.label)" }
+        return "筛选搜索"
+    }
+
+    static func conditions(_ query: SearchQuery) -> String {
+        var values: [String] = []
         if !query.text.isEmpty { values.append(query.text) }
         if query.titleOnly { values.append("仅标题") }
+        if query.matchPhrase { values.append("完整短语") }
         if !query.artist.isEmpty { values.append("作者 \(query.artist)") }
         for match in [TagMatch.all, .any, .exclude] {
             let tags = query.rules.filter { $0.match == match }.map { $0.tag.label }

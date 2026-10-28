@@ -4,6 +4,7 @@ final class ChromeV17UITests: XCTestCase {
     private func openSearchHistory(_ app: XCUIApplication) {
         let button = app.buttons["compose.search-history"]
         for _ in 0..<4 { if button.isHittable { break }; app.swipeDown() }
+        for _ in 0..<4 { if button.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(button.isHittable)
         button.tap()
         XCTAssertTrue(app.navigationBars["搜索记录"].waitForExistence(timeout: 5))
@@ -57,6 +58,118 @@ final class ChromeV17UITests: XCTestCase {
         app.buttons["discover.search-entry"].tap(); openSearchHistory(app)
         XCTAssertTrue(app.staticTexts["search-history.empty"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).count, 0)
+    }
+
+    func testHistoryLoadShowsSourceAndModifiedDraftWithoutExecuting() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        submitHistorySearch(app, "coast language:english -other:city")
+        submitHistorySearch(app, "mountain")
+        let executed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "已执行：EX · mountain")).firstMatch
+        XCTAssertTrue(executed.waitForExistence(timeout: 5))
+        // Editing the keyword retains the previous tag filters. Compare the
+        // complete actual search before/after cancellation, including them.
+        let previousSearch = executed.label
+        app.buttons["discover.search-entry"].tap()
+        let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.recent."))
+        let coast = records.matching(NSPredicate(format: "label CONTAINS %@", "coast")).firstMatch
+        for _ in 0..<4 { if coast.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(coast.isHittable)
+        coast.tap()
+
+        let state = app.staticTexts["compose.loaded-state"]
+        XCTAssertTrue(state.waitForExistence(timeout: 5))
+        XCTAssertTrue(state.isHittable, "Loading a row must scroll back to visible source feedback")
+        XCTAssertEqual(state.label, "已载入")
+        XCTAssertEqual(app.staticTexts["compose.loaded-title"].label, "coast")
+        XCTAssertEqual(app.staticTexts["compose.loaded-hint"].label, "条件已载入，尚未搜索。")
+        XCTAssertTrue(app.staticTexts["来自最近搜索"].exists)
+        let input = app.textFields["compose.text"]
+        XCTAssertEqual(input.value as? String, "coast")
+        let summary = app.staticTexts["compose.current-summary"]
+        XCTAssertTrue(summary.label.contains("包含 language:english"))
+        XCTAssertTrue(summary.label.contains("排除 other:city"))
+        XCTAssertEqual(coast.value as? String, "已载入")
+
+        input.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        input.typeText(" revised")
+        XCTAssertEqual(state.label, "已修改")
+        XCTAssertEqual(coast.value as? String, "已修改")
+        XCTAssertTrue(app.navigationBars["组合搜索"].exists, "Loading or editing a record must not execute it")
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "build24.history.loaded-and-modified"; shot.lifetime = .keepAlways; add(shot)
+
+        app.buttons["compose.cancel"].tap()
+        XCTAssertTrue(app.staticTexts[previousSearch].waitForExistence(timeout: 5), "Cancelling a loaded draft must keep the complete previous executed search")
+        app.buttons["discover.search-entry"].tap()
+        XCTAssertEqual(app.textFields["compose.text"].value as? String, "mountain")
+    }
+
+    func testFavoriteLoadStaysDistinctFromHistoryAndKeepsOriginalUntilSaved() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        submitHistorySearch(app, "coast language:english -other:city")
+        app.buttons["discover.search-entry"].tap()
+        app.buttons["compose.save-favorite"].tap()
+        nameFavorite(app, "海岸收藏")
+        let common = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.favorite.")).firstMatch
+        XCTAssertTrue(common.waitForExistence(timeout: 5)); common.tap()
+        let state = app.staticTexts["compose.loaded-state"]
+        XCTAssertTrue(state.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["来自常用组合"].exists)
+        XCTAssertEqual(app.staticTexts["compose.loaded-title"].label, "海岸收藏")
+        XCTAssertEqual(common.value as? String, "已载入")
+        let input = app.textFields["compose.text"]
+        input.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap(); input.typeText(" changed")
+        XCTAssertEqual(state.label, "已修改")
+        app.buttons["compose.cancel"].tap()
+
+        app.buttons["discover.search-entry"].tap(); common.tap()
+        XCTAssertEqual(input.value as? String, "coast", "Editing a loaded favorite must not silently overwrite the saved combination")
+        XCTAssertEqual(state.label, "已载入")
+        openSearchHistory(app)
+        let history = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-history.load.")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 5)); history.tap()
+        XCTAssertTrue(app.staticTexts["来自最近搜索"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["compose.loaded-title"].label, "coast")
+        XCTAssertNotEqual(common.value as? String, "已载入", "Only the actual source row should stay selected, even when history and favorite have the same query")
+        let recent = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.recent.")).firstMatch
+        XCTAssertEqual(recent.value as? String, "已载入")
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "build24.history.source-distinction"; shot.lifetime = .keepAlways; add(shot)
+    }
+
+    func testAllFavoriteCombinationsRemainReachableFromVerticalPreview() {
+        continueAfterFailure = false
+        let app = launch()
+        XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
+        app.buttons["discover.search-entry"].tap()
+        let input = app.textFields["compose.text"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        for index in 1...4 {
+            input.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            if let old = input.value as? String, old != input.placeholderValue {
+                input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+            }
+            input.typeText("preset\(index)")
+            app.buttons["compose.save-favorite"].tap()
+            nameFavorite(app, "组合\(index)")
+        }
+        let preview = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "compose.favorite."))
+        XCTAssertEqual(preview.count, 3, "The preview should stay compact while all saved combinations remain reachable")
+        let all = app.buttons["compose.search-favorites"]
+        for _ in 0..<4 { if all.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(all.isHittable); all.tap()
+        XCTAssertTrue(app.navigationBars["常用组合"].waitForExistence(timeout: 5))
+        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-favorites.load."))
+        XCTAssertEqual(rows.count, 4)
+        rows.matching(NSPredicate(format: "label CONTAINS %@", "组合4")).firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["compose.loaded-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["compose.loaded-state"].isHittable)
+        XCTAssertEqual(app.staticTexts["compose.loaded-title"].label, "组合4")
+        XCTAssertEqual(input.value as? String, "preset4")
     }
 
     func testSaveCurrentDraftAsCommonWithoutExecutingAndClearOnlyHistory() {

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-28T16:15:36.291902+00:00",
+  "version": "0.1.0",
+  "build": "24",
+  "runtime_source_sha256": "8967fe4c18439066da3abda93af7db0ae3daac1583cc864d041540da690939e9",
+  "runtime_digest_definition": "SHA256 of sorted App/ and Core/Sources/ paths: path + NUL + fileSHA256 + newline",
+  "change": "Vertical search presets;explicit load-to-edit source,selection and modified-draft feedback;scroll back to editor;release input focus before nested save sheet",
+  "behavior_verified": [
+    "History/favorite tap loads a full draft without executing",
+    "Loaded source and modified state are visible after returning to the editor",
+    "Equal conditions from history and favorites retain distinct source selection",
+    "Cancelling a loaded draft retains the complete prior executed search",
+    "Editing a loaded favorite does not overwrite the stored combination",
+    "All four favorites remain reachable with a three-row preview",
+    "Saving and clearing history retain existing semantics",
+    "Back/forward search browsing and horizontal toolbar text retained"
+  ],
+  "native_tests": {
+    "passed": 9,
+    "failed": 0,
+    "cases": [
+      "ExViewerTests.ExViewerStorageTests.testCorruptSearchHistoryIsPreservedWithoutBlockingFavorites",
+      "ExViewerTests.ExViewerStorageTests.testManualFileOverBrowseLimitIsReusedAndSurvivesCacheClear",
+      "ExViewerTests.ExViewerStorageTests.testPausedTaskCannotWriteIntoAnotherLibrary",
+      "ExViewerTests.ExViewerStorageTests.testPersistenceFailureStopsWaitingQueue",
+      "ExViewerTests.ExViewerStorageTests.testRecentSearchDeduplicationUsesAllConditionsAndSite",
+      "ExViewerTests.ExViewerStorageTests.testRecentSearchRoundTripPreservesLegacyLibraryAndManualFiles",
+      "ExViewerTests.ExViewerStorageTests.testSearchHistoryIsBoundedAndSeparatedByAccount",
+      "ExViewerTests.ExViewerStorageTests.testSearchHistoryWriteFailureKeepsExistingMemoryAndLibraryWritable",
+      "ExViewerTests.ExViewerStorageTests.testSessionVaultRoundTripUsesAppKeychainIdentity"
+    ]
+  },
+  "UI_tests": {
+    "passed": 8,
+    "failed": 0,
+    "cases": [
+      "ExViewerUITests.ChromeV17UITests.testAllFavoriteCombinationsRemainReachableFromVerticalPreview",
+      "ExViewerUITests.ChromeV17UITests.testBrowseSwipeBackForwardAndNewSearchBranch",
+      "ExViewerUITests.ChromeV17UITests.testCancelDraftDoesNotCreateSearchHistory",
+      "ExViewerUITests.ChromeV17UITests.testFavoriteLoadStaysDistinctFromHistoryAndKeepsOriginalUntilSaved",
+      "ExViewerUITests.ChromeV17UITests.testHistoryLoadShowsSourceAndModifiedDraftWithoutExecuting",
+      "ExViewerUITests.ChromeV17UITests.testRecentSearchLoadsFullTagConditionsAndSavesAsCommon",
+      "ExViewerUITests.ChromeV17UITests.testSaveCurrentDraftAsCommonWithoutExecutingAndClearOnlyHistory",
+      "ExViewerUITests.ToolbarTextV20UITests.testCancelAndAdjacentActionsStayHorizontalInAllSearchSheets"
+    ]
+  },
+  "release_build": "PASSED",
+  "history_and_library_storage_format": "UNCHANGED",
+  "prior_attempts_retained": [
+    {
+      "result": "FAILED",
+      "native_passed": 9,
+      "UI_passed": 6,
+      "UI_failed": 1,
+      "reason": "Cancellation assertion omitted retained tag filters;finalcase compares actual complete before/after search",
+      "result_bundle_collection": "Interrupted after completion stalled;original failure log retained"
+    },
+    {
+      "result": "INCOMPLETE",
+      "native_passed": 9,
+      "reason": "Repeated XCTest keyboard-animation waits during four-favorite creation;released parent focus before nested save sheet and reran the same checks"
+    }
+  ],
+  "final_simulator_result": "QA/Simulator-20261028T160814Z.xcresult",
+  "final_test_log_sha256": "34e3805e16dcfa3051475462b6156f79166613cf2b71c2dbcf464026951a7e5b",
+  "phone_UI_acceptance": "NOT_EXERCISED",
+  "real_site_account_acceptance": "NOT_EXERCISED",
+  "public_IPA_requires_personal_re_signing": true
+}
