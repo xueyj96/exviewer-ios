@@ -31,7 +31,30 @@ public struct SearchQuery: Codable, Equatable, Sendable {
     public var minPages: Int? = nil
     public var maxPages: Int? = nil
     public var requireTorrent = false
+    public var sortOrder: SearchSortOrder = .siteDefault
     public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case text, titleOnly, matchPhrase, artist, uploader, rules, excludedCategories
+        case minRating, minPages, maxPages, requireTorrent, sortOrder
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        text = try values.decode(String.self, forKey: .text)
+        titleOnly = try values.decode(Bool.self, forKey: .titleOnly)
+        matchPhrase = try values.decode(Bool.self, forKey: .matchPhrase)
+        artist = try values.decode(String.self, forKey: .artist)
+        uploader = try values.decode(String.self, forKey: .uploader)
+        rules = try values.decode([TagRule].self, forKey: .rules)
+        excludedCategories = try values.decode(Set<Int>.self, forKey: .excludedCategories)
+        minRating = try values.decodeIfPresent(Int.self, forKey: .minRating)
+        minPages = try values.decodeIfPresent(Int.self, forKey: .minPages)
+        maxPages = try values.decodeIfPresent(Int.self, forKey: .maxPages)
+        requireTorrent = try values.decode(Bool.self, forKey: .requireTorrent)
+        // Older saved searches and history have no sort field.
+        sortOrder = try values.decodeIfPresent(SearchSortOrder.self, forKey: .sortOrder) ?? .siteDefault
+    }
 
     /// An explicit edit of the single-author field replaces previous positive
     /// author tags. Deliberate OR/exclusion rules and other filters remain.
@@ -95,6 +118,7 @@ public struct SearchQuery: Codable, Equatable, Sendable {
         return components.url!
     }
     public var count: Int { (text.isEmpty ? 0 : 1) + (artist.isEmpty ? 0 : 1) + (uploader.isEmpty ? 0 : 1) + rules.count + (excludedCategories.isEmpty ? 0 : 1) + (minRating == nil ? 0 : 1) + (minPages == nil && maxPages == nil ? 0 : 1) + (requireTorrent ? 1 : 0) }
+    public var hasSettings: Bool { count > 0 || sortOrder != .siteDefault }
     public var pageRangeWarning: String? {
         if let minPages, minPages > 1000 { return "站点可能拒绝过窄或超过 1000 页的范围。" }
         if let maxPages, maxPages < 10 { return "站点可能拒绝最大页数小于 10 的范围。" }

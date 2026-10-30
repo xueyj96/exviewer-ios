@@ -82,7 +82,8 @@ import ExViewerCore
                 next = nil; return
             }
             items = QASamples.feedGalleries.filter { GalleryRatingFilter.includes($0, minimum: minimumRating) }; categories = ["0": "常用", "1": "稍后阅读"]
-            next = ProcessInfo.processInfo.arguments.contains("--qa-feed-performance") ? nil : URL(string: "https://exhentai.org/?qa-page=2"); return
+            let finiteFixture = ProcessInfo.processInfo.arguments.contains("--qa-feed-performance") || ProcessInfo.processInfo.arguments.contains("--qa-search-sort")
+            next = finiteFixture ? nil : URL(string: "https://exhentai.org/?qa-page=2"); return
         }
         let current = context, account = session.generation, owner = session.owner
         loading = true; activeURL = url; activePriority = .foreground; retryURL = url

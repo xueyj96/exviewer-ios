@@ -353,7 +353,7 @@ struct DiscoveryComposerView: View {
 
     private var filterCount: String {
         guard let query = try? proposedQuery() else { return "待检查" }
-        let count = query.count - (query.text.isEmpty ? 0 : 1) + (query.titleOnly ? 1 : 0) + (query.matchPhrase ? 1 : 0)
+        let count = query.count - (query.text.isEmpty ? 0 : 1) + (query.titleOnly ? 1 : 0) + (query.matchPhrase ? 1 : 0) + (query.sortOrder == .siteDefault ? 0 : 1)
         let scope = draftSite == .ex ? "EX" : "EH"
         return "\(scope) · \(count == 0 ? "不限" : "\(count) 项")"
     }
@@ -366,7 +366,7 @@ struct DiscoveryComposerView: View {
 
     private var loadedStatus: String {
         let origin = savedFeedback ? "已保存为常用" : loadedSource?.kind == .recent ? "从最近搜索载入" : "从常用组合载入"
-        let count = (try? proposedQuery()).map { "\($0.count) 项条件" } ?? "条件待检查"
+        let count = (try? proposedQuery()).map { "\($0.count + ($0.sortOrder == .siteDefault ? 0 : 1)) 项设置" } ?? "设置待检查"
         return "\(origin) · \(count)\(sourceModified ? " · 已修改" : "")"
     }
 
@@ -382,6 +382,31 @@ struct DiscoveryComposerView: View {
                             .autocorrectionDisabled().textInputAutocapitalization(.never)
                             .accessibilityIdentifier("compose.artist")
                     }
+                }
+
+                Section {
+                    Menu {
+                        Picker("结果顺序", selection: $draftQuery.sortOrder) {
+                            ForEach(SearchSortOrder.allCases) { order in Text(order.name).tag(order) }
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text("结果顺序").foregroundStyle(.primary)
+                            Spacer(minLength: 8)
+                            Text(draftQuery.sortOrder.name).foregroundStyle(Color.accentColor)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption.weight(.medium)).foregroundStyle(Color.accentColor)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("compose.sort-order")
+                } header: {
+                    Text("排序")
+                } footer: {
+                    Text("评分、页数与标题排序仅对已加载结果生效。")
+                        .accessibilityIdentifier("compose.sort-scope")
                 }
 
                 Section("标签条件") {
@@ -514,7 +539,7 @@ struct DiscoveryComposerView: View {
     private func prepareFavorite() {
         do {
             let query = try proposedQuery()
-            guard query.count > 0 else { failure = "先输入关键词、标签或筛选条件，再存为常用。"; return }
+            guard query.hasSettings else { failure = "先输入关键词、标签或搜索设置，再存为常用。"; return }
             inputFocused = false
             let original = draftSavedID.flatMap { id in library.snapshot.saved.first(where: { $0.id == id }) }
             favorite = FavoriteSearchDraft(query: query, site: draftSite,
@@ -540,7 +565,7 @@ struct DiscoveryComposerView: View {
 
     private var hasDraftConditions: Bool {
         var filters = draftQuery; filters.text = ""
-        return !inputText.isEmpty || filters.count > 0 || filters.titleOnly || filters.matchPhrase ||
+        return !inputText.isEmpty || filters.hasSettings || filters.titleOnly || filters.matchPhrase ||
             !minimumPagesText.isEmpty || !maximumPagesText.isEmpty
     }
 

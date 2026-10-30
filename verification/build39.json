@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0",
+  "build": "39",
+  "recorded_at_utc": "2026-10-30T21:22:52.930155+00:00",
+  "stage": "LOCAL_RELEASE_BUILD_AND_SEARCH_TESTS_VERIFIED",
+  "base_commit": "45fd4cd1931d8ebf4a5138ba46d846130cd5499c",
+  "runtime_source_sha256": "f30e391f1ef5a35ddbdccfda104b0377de13aaeb541c30e76d9c2f9a5dfc4215",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "implemented": [
+    "Whole-row native single-choice menu in the search filter form",
+    "Site order, rating descending, pages descending/ascending and natural title order",
+    "Non-site ordering explicitly applies only to loaded results",
+    "Sorting is persisted in saved combinations and recent history; order-only edits mark a loaded draft as changed",
+    "Legacy records without sort decode to site order without rewriting files",
+    "A changed order shares the current pager, loaded pages, cursor and in-flight continuation",
+    "A sorted batch restores the visible card; default order retains stable placement",
+    "Result status uses the original action row without repeating order in the search text"
+  ],
+  "tests": {
+    "core_passed": 65,
+    "native_passed": 20,
+    "UI_passed": 3,
+    "failed": 0,
+    "core_log": "QA/search-sort/core.log",
+    "final_result_bundle": "QA/Simulator-20261030T211919Z.xcresult",
+    "final_result": "Passed",
+    "prior_44pt_failure_repaired_and_passed": true,
+    "first_failed_run_result_collection_interrupted": true,
+    "full_historical_app_suite_rerun": false
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/search-sort/release39-final-build.log"
+  },
+  "screenshots": [
+    "QA/search-sort/final-ui-attachments/0F3F6FAB-BF34-4225-A5CC-AB43BEFB670F.png",
+    "QA/search-sort/final-ui-attachments/C471F91E-5393-4FA0-AF8A-9E3E71643593.png"
+  ],
+  "legacy_library_and_history_load_byte_unchanged": true,
+  "real_site_account_UI_acceptance": "NOT_EXERCISED",
+  "phone_UI_acceptance": "NOT_EXERCISED",
+  "automatic_background_requests_added": false
+}

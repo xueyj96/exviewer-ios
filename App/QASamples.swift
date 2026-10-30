@@ -52,6 +52,11 @@ enum QASamples {
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-reader-many") { gallery.pages = 12 }
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") { gallery.cover = cover(seed: index + 1) }
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-rating-filter") { gallery.rating = [2.8, 2.9, 3.0, 4.75][index] }
+            if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-search-sort") {
+                gallery.title = ["Study D", "Study A", "Study C", "Study B"][index]
+                gallery.rating = [2.8, 4.9, 3.0, 4.5][index]
+                gallery.pages = [80, 20, 120, 40][index]
+            }
             return gallery
         }
     }

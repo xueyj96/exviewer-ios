@@ -28,7 +28,7 @@ struct DiscoverView: View {
     }
 
     private var entry: DiscoveryEntry { navigation.current }
-    private var hasActiveConditions: Bool { entry.query.count > 0 }
+    private var hasActiveConditions: Bool { entry.query.hasSettings }
 
     var body: some View {
         FloatingFeedLayout { headerHeight in
@@ -104,13 +104,18 @@ struct DiscoverView: View {
                 searchEntryRow
                 if !library.snapshot.saved.isEmpty { savedSearchShortcuts }
                 if !entry.query.rules.isEmpty { ruleChips }
-                if entry.query.count == 0 {
+                if !entry.query.hasSettings {
                     Picker("浏览范围", selection: laneBinding) { Text("最新").tag(0); Text("热门").tag(1) }
                         .pickerStyle(.segmented)
                 } else {
                     HStack(spacing: 10) {
-                        Text("已执行：\(searchSummary(entry.query, site: entry.site))")
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("已执行：\(searchSummary(entry.query, site: entry.site))")
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Text("排序：\(entry.query.sortOrder.summary)")
+                                .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                .accessibilityIdentifier("discover.sort-status")
+                        }
                         Spacer(minLength: 4)
                         Button(action: prepareToSave) { Image(systemName: "bookmark").frame(minWidth: 44, minHeight: 44) }
                             .accessibilityLabel("保存搜索组合")
@@ -307,7 +312,9 @@ struct DiscoverView: View {
     }
 
     private func searchSummary(_ query: SearchQuery, site: GallerySite) -> String {
-        SearchPresentation.summary(query, site: site)
+        var filters = query
+        filters.sortOrder = .siteDefault
+        return SearchPresentation.summary(filters, site: site)
     }
 }
 
@@ -358,6 +365,10 @@ private struct DiscoveryHistoryGesture: ViewModifier {
 }
 
 private struct DiscoveryFeedView: View {
+    private struct RestorationID: Equatable {
+        let topInset: CGFloat
+        let sortedOrderRevision: Int
+    }
     @ObservedObject var entry: DiscoveryEntry
     var topInset: CGFloat
     var onRefresh: () -> Void
@@ -380,7 +391,7 @@ private struct DiscoveryFeedView: View {
                 if pager.interrupted {
                     StatusMessage(title: "已暂停之前的加载，可重试继续。") { pager.retry(session: session) }
                 }
-                GalleryRows(galleries: pager.items, layout: .grid, sourceIdentity: entry.id.uuidString,
+                GalleryRows(galleries: entry.displayedItems, layout: .grid, sourceIdentity: entry.id.uuidString,
                             onNearEnd: { if !restoring && isCurrent() && pager.failure == nil && !pager.interrupted { pager.more(session: session, prefetch: true) } },
                             viewport: .init(space: entry.id.uuidString, height: viewport.size.height, topOcclusion: topInset),
                             onVisibleAnchor: { if !restoring && isCurrent() { entry.updateVisibleAnchor($0) } })
@@ -396,11 +407,12 @@ private struct DiscoveryFeedView: View {
         .accessibilityIdentifier("discover.feed")
         .refreshable(action: onRefresh)
         .contentMargins(.top, topInset, for: .scrollIndicators)
-        .task(id: topInset) {
+        .task(id: RestorationID(topInset: topInset, sortedOrderRevision: entry.sortedOrderRevision)) {
             restoring = true
             // A new feed must finish its initial placement before viewport
-            // callbacks can save anchors or request another batch.
-            let anchor = entry.scrollAnchor ?? entry.pager.items.first?.id
+            // callbacks can save anchors or request another batch. A locally
+            // sorted append restores the visible card as earlier results move.
+            let anchor = entry.scrollAnchor ?? entry.displayedItems.first?.id
             await Task.yield()
             guard !Task.isCancelled, isCurrent() else { return }
             if let anchor {

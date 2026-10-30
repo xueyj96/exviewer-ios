@@ -9,17 +9,30 @@ import ExViewerCore
     let lane: Int
     let savedID: UUID?
     let requestURL: URL
-    let pager = GalleryPager()
+    let pager: GalleryPager
+    @Published private(set) var displayedItems: [Gallery] = []
+    private(set) var sortedOrderRevision = 0
+    private var itemsObservation: AnyCancellable?
     @Published var scrollAnchor: String?
     private(set) var didStart = false
 
-    init(query: SearchQuery, site: GallerySite, lane: Int, savedID: UUID?, requestURL: URL, scrollAnchor: String? = nil) {
+    init(query: SearchQuery, site: GallerySite, lane: Int, savedID: UUID?, requestURL: URL, scrollAnchor: String? = nil, pager: GalleryPager? = nil) {
         self.query = query
         self.site = site
         self.lane = lane
         self.savedID = savedID
         self.requestURL = requestURL
         self.scrollAnchor = scrollAnchor
+        self.pager = pager ?? GalleryPager()
+        // Sort only when a loaded batch changes, not on scrolling or cover updates.
+        itemsObservation = self.pager.$items.sink { [weak self] items in
+            guard let self else { return }
+            let ordered = query.sortOrder.ordered(items)
+            if query.sortOrder != .siteDefault, ordered.map(\.id) != displayedItems.map(\.id) {
+                sortedOrderRevision += 1
+            }
+            displayedItems = ordered
+        }
     }
 
     func markStarted() { didStart = true }
@@ -53,7 +66,7 @@ import ExViewerCore
     }
 
     /// Validates before changing history. Identical URLs reuse the current feed
-    /// and replace only immutable request metadata when its saved-search identity changed.
+    /// and replace only immutable presentation/saved-search metadata.
     @discardableResult
     func submit(query: SearchQuery, site: GallerySite, lane: Int, savedID: UUID?, session: SiteSession, qa: Bool) throws -> Bool {
         let url = try Self.requestURL(query: query, site: site, lane: lane)
@@ -63,9 +76,9 @@ import ExViewerCore
                 return false
             }
             let old = current
-            let snapshot = old.pager.navigationSnapshot()
-            let replacement = DiscoveryEntry(query: query, site: site, lane: lane, savedID: savedID, requestURL: url, scrollAnchor: old.scrollAnchor)
-            replacement.pager.restoreNavigationSnapshot(snapshot)
+            let replacement = DiscoveryEntry(query: query, site: site, lane: lane, savedID: savedID, requestURL: url,
+                                             scrollAnchor: query.sortOrder == old.query.sortOrder ? old.scrollAnchor : nil,
+                                             pager: old.pager)
             if old.didStart { replacement.markStarted() }
             current = replacement
             if !replacement.didStart {
@@ -129,7 +142,7 @@ import ExViewerCore
 
     static func requestURL(query: SearchQuery, site: GallerySite, lane: Int) throws -> URL {
         guard (0...1).contains(lane) else { throw ViewerError.invalidQuery("浏览范围无效。") }
-        if query.count > 0 { return try query.url(site: site) }
+        if query.hasSettings { return try query.url(site: site) }
         return lane == 1 ? site.baseURL.appendingPathComponent("popular") : try SearchQuery().url(site: site)
     }
 }

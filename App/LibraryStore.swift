@@ -43,7 +43,9 @@ struct RecentSearchRecord: Codable, Identifiable {
         canonical.rules.sort {
             $0.id == $1.id ? $0.match.rawValue < $1.match.rawValue : $0.id < $1.id
         }
-        return try canonical.url(site: site).absoluteString
+        let url = try canonical.url(site: site).absoluteString
+        // Keep the site's URL/cache identity independent of local presentation.
+        return canonical.sortOrder == .siteDefault ? url : url + "|sort=" + canonical.sortOrder.rawValue
     }
 }
 
@@ -120,7 +122,7 @@ private struct RecentSearchFile: Codable {
             guard file.version == 1, file.entries.count <= Self.searchHistoryLimit,
                   Set(file.entries.map(\.id)).count == file.entries.count else { throw ViewerError.storage }
             for entry in file.entries {
-                guard entry.query.count > 0 else { throw ViewerError.storage }
+                guard entry.query.hasSettings else { throw ViewerError.storage }
                 _ = try entry.query.url(site: entry.site)
             }
             recentSearches = file.entries
@@ -139,7 +141,7 @@ private struct RecentSearchFile: Codable {
     }
 
     @discardableResult func recordSearch(query: SearchQuery, site: GallerySite, date: Date = Date()) -> Bool {
-        guard query.count > 0, let key = try? RecentSearchRecord.requestKey(site: site, query: query) else { return false }
+        guard query.hasSettings, let key = try? RecentSearchRecord.requestKey(site: site, query: query) else { return false }
         var entries = recentSearches
         let existing = entries.firstIndex { (try? RecentSearchRecord.requestKey(site: $0.site, query: $0.query)) == key }
         let id = existing.map { entries.remove(at: $0).id } ?? UUID()
@@ -260,6 +262,7 @@ enum SearchPresentation {
         if query.minPages != nil || query.maxPages != nil { values.append("\(query.minPages.map { String($0) } ?? "0")–\(query.maxPages.map { String($0) } ?? "不限")页") }
         if !query.uploader.isEmpty { values.append("上传者 \(query.uploader)") }
         if query.requireTorrent { values.append("torrent") }
+        if query.sortOrder != .siteDefault { values.append(query.sortOrder.summary) }
         return values.joined(separator: " · ")
     }
 }
