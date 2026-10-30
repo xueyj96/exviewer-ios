@@ -1,0 +1,515 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-30T16:17:45.346804+00:00",
+  "version": "0.1.0",
+  "build": "37",
+  "stage": "LOCAL_SHARED_FAVORITES_AND_LIBRARY_RELEASE_VERIFIED_NOT_INSTALLED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "ac03552c70d46920c58a8a14634db37896b0b2641fa99324e13a5350885819a7",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build36": [
+    "App/CompactMainTabs.swift",
+    "App/ExViewerApp.swift",
+    "App/GalleryFavoriteEditorModel.swift",
+    "App/GalleryFavoriteEditorView.swift",
+    "App/GalleryFavoriteObservation.swift",
+    "App/LibraryScopePicker.swift",
+    "App/LibrarySorting.swift",
+    "App/LibraryStore.swift",
+    "App/LibraryViews.swift",
+    "App/NativeFavoritesQA.swift",
+    "App/ReaderView.swift",
+    "App/ReadingHistoryView.swift",
+    "App/SiteFavoriteCache.swift",
+    "App/SiteSession.swift"
+  ],
+  "implemented": [
+    "Session-local favorite state and form cache shared by reader and detail; scoped by account, session and full gallery reference",
+    "Recent15s verified form reuse and in-flight initial read sharing; maximum64 cached entries; no persisted forms or mutation queue",
+    "One POST then fresh GET confirmation; mutation invalidation and per-entry revisions reject late read overwrites",
+    "Reader star reflects site favorites; detail has explicit confirmed removal; unknown, auth failure and uncertain outcomes cannot imply success",
+    "Loading spinner/label centered within its row; other form alignment preserved",
+    "Old v1 bookmarks storage is the read-later collection without copy, timestamp invention or on-load rewrite",
+    "Library has read later/site favorites/history/downloads; discovery long press and read-later bulk removal preserve history/download data",
+    "Build36 selection navigation replacement and stable column implementation retained"
+  ],
+  "excluded_by_user": [
+    "Read-later search",
+    "Phone installation",
+    "Publication/push/merge",
+    "Real-account favorite mutations"
+  ],
+  "migration": {
+    "kind": "COMPATIBLE_SEMANTIC_RENAME_NO_FILE_MIGRATION",
+    "storage_key": "bookmarks",
+    "version": 1,
+    "owner_directory_unchanged": true,
+    "repeated_load_or_restart_idempotent": true,
+    "old_records_and_order_preserved": true,
+    "reading_does_not_auto_remove": true
+  },
+  "tests": {
+    "counting": "38 native and11 UI unique latest applicable results across targeted runs; not a full-suite run",
+    "native_unique_latest_passed": 38,
+    "UI_unique_latest_passed": 11,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.FavoriteObservationTests testControlledClickToReadyColdVersusPreparedWorkload": {
+        "result": "passed",
+        "duration_seconds": 0.971,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.FavoriteObservationTests testExpiredWrongGalleryAndInvalidAccountPreparationCannotReuseForm": {
+        "result": "passed",
+        "duration_seconds": 0.003,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.FavoriteObservationTests testFailureAndInvalidIdentityCannotDisplayOldOrSuccessfulState": {
+        "result": "passed",
+        "duration_seconds": 0.006,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.FavoriteObservationTests testLateReadCannotOverwriteEditorStateOrNewAccount": {
+        "result": "passed",
+        "duration_seconds": 0.005,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.FavoriteObservationTests testOpeningWhilePreloadRunsSharesOneReadAndRetryUsesNewRequest": {
+        "result": "passed",
+        "duration_seconds": 0.008,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.FavoriteObservationTests testRecentPreparationOpensWithoutReadButSubmissionAlwaysReadsFreshState": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testAddMoveAndRemoveRequireFreshStateAndNotifyFavoritesList": {
+        "result": "passed",
+        "duration_seconds": 0.008,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testCancelOnlyLoadsStateAndDoesNotWriteOrInvalidate": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testDoubleSaveAndInvalidNotesDoNotCauseExtraPosts": {
+        "result": "passed",
+        "duration_seconds": 0.027,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testLostPostReplyCanBeConfirmedByReadbackWithoutResubmitting": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testMovingPreservesAnExistingLongNoteWithoutRewritingIt": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testReadableReplyWithoutMatchingStateIsNotSavedAndRetainsEdits": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testStaleContextDoesNotSubmitOrExposeLateState": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testUnknownOutcomeKeepsDraftBlocksPostsAndReadOnlyRefreshCanConfirm": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testLostPopupPostIsNotRetriedByTransport": {
+        "result": "passed",
+        "duration_seconds": 0.059,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupPostHasSameOriginHeadersAndFormEncoding": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupWriteCannotRedirectToAnotherOrigin": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testAppendUsesCurrentHeightsButPreservesAllExistingMemberships": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testDuplicateAndInvalidAspectInputsRemainFiniteAndEmptyResets": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testInitialEqualHeightsAlternateWithDeterministicTies": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testLateAspectUpdatesDoNotRedistributeExistingCards": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testPrependAndExplicitReorderResetToTheNewResultOrder": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testRemovalClosesGapsWithoutMovingSurvivorsBetweenColumns": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.GalleryGridPlacementTests testThousandCardPagedFeedKeepsMembershipAfterEveryAppend": {
+        "result": "passed",
+        "duration_seconds": 0.015,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.LibrarySelectionStoreTests testBulkSelectionTracksLoadedIDsAndUpdatesOnlyExistingEntries": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.LibrarySelectionStoreTests testConfirmedBatchRemovalLeavesOtherSelectionsUntouched": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.LibrarySelectionStoreTests testDatasetAppendPreservesSelectionAndContextClearRemovesIt": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.LibrarySelectionStoreTests testDatasetReplacementDropsSelectionsOutsideVisibleIDsAndRejectsStaleTaps": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.LibrarySelectionStoreTests testSingleTogglePublishesOnlyTargetEntryAndIndependentSummary": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testAccountAndGuestCollectionsAreIsolatedAcrossSwitchAndRestart": {
+        "result": "passed",
+        "duration_seconds": 0.01,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testIdempotentMembershipAndRemovalSurviveRestartWithoutResurrectingLegacyData": {
+        "result": "passed",
+        "duration_seconds": 0.007,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testOldBookmarksBecomeReadLaterWithoutRewritingOrInventingDates": {
+        "result": "passed",
+        "duration_seconds": 0.008,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testReadingCompletionDoesNotRemoveReadLaterAndBulkRemovalPreservesOtherData": {
+        "result": "passed",
+        "duration_seconds": 0.006,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testSameStableIDCannotCreateDuplicatesWhenGalleryMetadataChanges": {
+        "result": "passed",
+        "duration_seconds": 0.006,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.ReadLaterCompatibilityTests testSaveFailureRetainsMembershipAndDoesNotReportSuccess": {
+        "result": "passed",
+        "duration_seconds": 0.005,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testCacheIsBoundedAndCannotCarryStateOrFormsAcrossAccountsAndSessions": {
+        "result": "passed",
+        "duration_seconds": 0.007,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testOldReadCannotOverwriteNewerLocalConfirmationAndFailureRemainsUnknown": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testReaderAndDetailShareConfirmedEditAndDoNotReadAgainOnRevision": {
+        "result": "passed",
+        "duration_seconds": 0.006,
+        "raw_log": "QA/Simulator-20261030T161503Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161503Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testDetailCancelFavoriteHasExplicitConfirmationAndVerifiedUnfavoritedResult": {
+        "result": "passed",
+        "duration_seconds": 15.069,
+        "raw_log": "QA/Simulator-20261030T160553Z-test.log",
+        "xcresult": "QA/Simulator-20261030T160553Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testDiscoverContextMenuReadLaterAndBulkRemovalKeepHistoryDownloadsAndSiteStateSeparate": {
+        "result": "passed",
+        "duration_seconds": 25.753,
+        "raw_log": "QA/Simulator-20261030T161036Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161036Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testLegacyCollectionAndFourScopesWorkWithLargeTypeLandscape": {
+        "result": "passed",
+        "duration_seconds": 22.69,
+        "raw_log": "QA/Simulator-20261030T161330Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161330Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testLoadingGroupIsCenteredInPortraitAndLandscapeWithoutChangingFormRowAlignment": {
+        "result": "passed",
+        "duration_seconds": 17.124,
+        "raw_log": "QA/Simulator-20261030T161330Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161330Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testReaderStarUsesSiteFavoritesWhileReadLaterRemainsIndependent": {
+        "result": "passed",
+        "duration_seconds": 32.021,
+        "raw_log": "QA/Simulator-20261030T161036Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161036Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testUnauthenticatedReaderCannotAppearFavoritedOrSubmit": {
+        "result": "passed",
+        "duration_seconds": 14.24,
+        "raw_log": "QA/Simulator-20261030T160553Z-test.log",
+        "xcresult": "QA/Simulator-20261030T160553Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testBulkRemoveAndMoveAreReachableAndMainTabsRestoreAfterCompletion": {
+        "result": "passed",
+        "duration_seconds": 32.415,
+        "raw_log": "QA/Simulator-20261030T160553Z-test.log",
+        "xcresult": "QA/Simulator-20261030T160553Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testUnknownSubmissionKeepsSelectionAndRefreshOnlyConfirmsIt": {
+        "result": "passed",
+        "duration_seconds": 14.853,
+        "raw_log": "QA/Simulator-20261030T160553Z-test.log",
+        "xcresult": "QA/Simulator-20261030T160553Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testOfflineReaderDoesNotStackItsControlsOverMainTabs": {
+        "result": "passed",
+        "duration_seconds": 16.782,
+        "raw_log": "QA/Simulator-20261030T161036Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161036Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testExistingGroupAndNoteRemainEditableWithLargeTypeAndDarkAppearance": {
+        "result": "passed",
+        "duration_seconds": 14.489,
+        "raw_log": "QA/Simulator-20261030T161036Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161036Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderPositionV35UITests testFittedImageUsesTheWholeScreenAndDoesNotMoveWhenChromeToggles": {
+        "result": "passed",
+        "duration_seconds": 26.207,
+        "raw_log": "QA/Simulator-20261030T161036Z-test.log",
+        "xcresult": "QA/Simulator-20261030T161036Z.xcresult",
+        "bundle_finalized": true
+      }
+    },
+    "prior_failed_cases": [
+      {
+        "case": "ExViewerUITests.LibraryFavoritesV37UITests testDetailCancelFavoriteHasExplicitConfirmationAndVerifiedUnfavoritedResult",
+        "result": "failed",
+        "duration_seconds": 17.308,
+        "raw_log": "QA/Simulator-20261030T155454Z-test.log",
+        "xcresult": "QA/Simulator-20261030T155454Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.LibraryFavoritesV37UITests testDiscoverContextMenuReadLaterAndBulkRemovalKeepHistoryDownloadsAndSiteStateSeparate",
+        "result": "failed",
+        "duration_seconds": 21.624,
+        "raw_log": "QA/Simulator-20261030T155454Z-test.log",
+        "xcresult": "QA/Simulator-20261030T155454Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.LibraryFavoritesV37UITests testReaderStarUsesSiteFavoritesWhileReadLaterRemainsIndependent",
+        "result": "failed",
+        "duration_seconds": 24.435,
+        "raw_log": "QA/Simulator-20261030T155454Z-test.log",
+        "xcresult": "QA/Simulator-20261030T155454Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.LibraryFavoritesV37UITests testDiscoverContextMenuReadLaterAndBulkRemovalKeepHistoryDownloadsAndSiteStateSeparate",
+        "result": "failed",
+        "duration_seconds": 30.35,
+        "raw_log": "QA/Simulator-20261030T160553Z-test.log",
+        "xcresult": "QA/Simulator-20261030T160553Z.xcresult",
+        "bundle_finalized": true
+      }
+    ],
+    "compile_failure_evidence": [
+      "QA/library37/compile-first.log",
+      "QA/Simulator-20261030T160425Z-build.log",
+      "QA/library37/release37-build.log"
+    ],
+    "prior_failures_retained": true,
+    "final_native_green_bundle": "QA/Simulator-20261030T161503Z.xcresult",
+    "green_UI_bundle": "QA/Simulator-20261030T161036Z.xcresult",
+    "screen_capture_green_bundle": "QA/Simulator-20261030T161330Z.xcresult",
+    "post_UI_change": "One account help-label noun changed; exact inverse hash verified in QA/library37/final-copy-readback.json. Native checks rerun; UI controller logic unchanged.",
+    "search_and_grid_core_hashes_unchanged_from_build36": true,
+    "core_package_tests_rerun": false
+  },
+  "performance": {
+    "environment": "Isolated simulator,3 sequential samples,150ms mock read; click-to-model-ready wall time",
+    "samples": [
+      {
+        "prepared_seconds": 1.2040138244628906e-05,
+        "cold_seconds": 0.15424799919128418
+      },
+      {
+        "cold_seconds": 0.15313899517059326,
+        "prepared_seconds": 1.2040138244628906e-05
+      },
+      {
+        "cold_seconds": 0.15639901161193848,
+        "prepared_seconds": 1.0967254638671875e-05
+      }
+    ],
+    "additional_initial_GET_when_prepared": 0,
+    "shared_in_flight_initial_GET_count": 1,
+    "submission_confirmation_always_fresh": true,
+    "real_site_or_phone_latency_proven": false
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/library37/release37-build-verified.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/library37/attachments-run2/CB635A3C-6FFE-420D-A1A1-10033AC7CE1B.png",
+      "sha256": "313e7f1906de2b5b36990af15f199a3f8c4532072615f6a05919c19eb2e5894c",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-run2/13E6B1DD-5E74-4709-8734-57CA1A3B2608.png",
+      "sha256": "f4fa8c5e07a1f5997a9cb4892cd2c71029d922c88d7efc1087ff086d07c8c5fe",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-run2/0E335CB8-4289-4256-8236-CD142F6A11B6.png",
+      "sha256": "f2aed351f67e229e0fc95fbcd41f65d082ee8911ce31b038192049ddd34f9941",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-run2/8CEA7092-E445-4261-B94F-E72CBC393E8E.png",
+      "sha256": "4d051d10e26e5ae063b708dc03abd1bdff8b10d62d2e82e35ea2f5c11c55caf3",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-run3/8211CEE7-02A3-416B-A882-FF1C6E8A0F73.png",
+      "sha256": "7c5e1ccf8e4ae173ffdb75cbf109272e298f954f65e8701c2abec9f936af7918",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-screen/BDFFB133-67F3-4ECC-88DB-0157AF7FB505.png",
+      "sha256": "9379b88e2f8d62101df4948575f25b6b2b949f6a17d7ecfd5b4d4693d1e24e83",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library37/attachments-screen/8FA45877-96A5-46CC-9C5D-37D84F82F12B.png",
+      "sha256": "bce89fb403e35fd5b75c9f435dd73cd1a75c499fedefcd10507dbfe2b52962b5",
+      "visually_inspected": true
+    }
+  ],
+  "screenshot_notes": "Earlier landscape app.screenshot attachments were clipped with orientation metadata; final accepted landscape pixels come from XCUIScreen.main. QA-only hidden counter row is absent in Release.",
+  "phone_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "installed_or_published": false,
+  "recovery": "Frozen build36 remains intact; no data schema or destructive on-load migration"
+}

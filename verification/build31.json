@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T12:48:22.231388+00:00",
+  "version": "0.1.0",
+  "build": "31",
+  "stage": "LOCAL_NATIVE_FAVORITES_IMPLEMENTATION_RELEASE_AND_TARGETED_CHECKS_VERIFIED",
+  "base_commit": "f2a4b84aacf3954156943402ff195919281d75e3",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "127050f3c8d6d5efb749b9e95dcb6c650e5eac1508b16460728f1f0d02cd0b37",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "implemented": {
+    "primary_action": "Native site favorite button beside reading;verified group name shown;unknown state remains explicit",
+    "editor": [
+      "Reads10site-named groups,current group,andexisting note into native controls",
+      "Add,move,note edit,andconfirmed removal;Cancel doesnot submit",
+      "Preserve unchanged legacy long notes;new notes limited byofficial200UTF8-byte rule",
+      "Native Save/Cancel remain visible;large-type anddark appearance checked"
+    ],
+    "secondary_actions": "Local bookmark toggle anddownload remain underMore;local/remote data remain separate",
+    "submission": [
+      "Reference-bound same-origin form;POST Origin/Referer;reject cross-origin write redirects",
+      "One POST;fresh GET reads exact current state andnote forconfirmation",
+      "Lost POST reply may beconfirmed byreadback;unknown readback preserves draft andblocks furtherwrites untilfresh status read",
+      "HTTP200 alone isnot saved;nonmatching state retained witherror",
+      "Favorite cache epoch invalidated beforesend;favorites revision included infeed source identity forinactive-tab return"
+    ],
+    "data_effect": "No library/history/download migration;no local bookmarks converted tosite favorites;form hidden fields andnotes remain memory-only"
+  },
+  "tests": {
+    "counting": "Unique targeted cases atlatest applicable result;prior failed cases andaborted diagnostic bundles retained;not a single full-suite run",
+    "core_package_passed": 61,
+    "core_log": "QA/native-favorite31/core-final.log",
+    "native_unique_latest_passed": 12,
+    "UI_unique_latest_passed": 11,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.FeedSnapshotCacheTests testFavoriteInvalidationRejectsAWriteUsingTheOldEpoch": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testAddMoveAndRemoveRequireFreshStateAndNotifyFavoritesList": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testCancelOnlyLoadsStateAndDoesNotWriteOrInvalidate": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testDoubleSaveAndInvalidNotesDoNotCauseExtraPosts": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testLostPostReplyCanBeConfirmedByReadbackWithoutResubmitting": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testMovingPreservesAnExistingLongNoteWithoutRewritingIt": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testReadableReplyWithoutMatchingStateIsNotSavedAndRetainsEdits": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testStaleContextDoesNotSubmitOrExposeLateState": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testUnknownOutcomeKeepsDraftBlocksPostsAndReadOnlyRefreshCanConfirm": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testLostPopupPostIsNotRetriedByTransport": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupPostHasSameOriginHeadersAndFormEncoding": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupWriteCannotRedirectToAnotherOrigin": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerUITests.ChromeV17UITests testDetailLinksUseCompactRowsInLightAndDark": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.ExViewerUITests testGalleryDetailUsesOneCompactActionRow": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testCancelDoesNotFavoriteAndLocalBookmarkLivesInMore": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T124411Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T124411Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testExistingGroupAndNoteRemainEditableWithLargeTypeAndDarkAppearance": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T124411Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T124411Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testInitialReadFailureOffersNativeReload": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testLostPostResponseIsReadBackAndDoesNotRequireResubmission": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testNativeAddMoveNoteAndConfirmedRemovalUpdateDetailState": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testUnknownSubmissionKeepsSelectionAndRefreshOnlyConfirmsIt": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.StoredBookmarkCoversV30UITests testPersistedBookmarksRestoreCoversAfterReopenAndSort": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.StoredBookmarkCoversV30UITests testUnavailableStoredCoverShowsRetryWithoutBlockingBookmarkBrowsing": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T122809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T122809Z-test.log"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testFavoriteListRefreshesAfterEditingFromAnotherTabAndFromItsOwnDetail": {
+        "result": "passed",
+        "xcresult": "QA/Simulator-20261029T123809Z.xcresult",
+        "raw_log": "QA/Simulator-20261029T123809Z-test.log"
+      }
+    },
+    "earlier_failed_bundle_state": "QA/Simulator-20261029T122809Z.xcresult lacks final Info.plist after diagnostic collection stopped;passed case evidence isretained raw XCTest terminal lines;required failed case replaced bycomplete green recheck",
+    "completed_green_rechecks": [
+      "QA/Simulator-20261029T123809Z.xcresult",
+      "QA/Simulator-20261029T124411Z.xcresult"
+    ]
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "configuration": "Release",
+    "log": "QA/native-favorite31/release31-package-build.log"
+  },
+  "viewed_screenshots": [
+    "QA/native-favorite31/final-attachments/81142367-536D-418D-A940-5BDF80E8BA85.png",
+    "QA/native-favorite31/visual-attachments/66A1AB64-6219-4B3C-B443-B94992DFA9CE.png",
+    "QA/native-favorite31/visual-attachments/E12D449D-D88E-43A3-AE35-8FA489562762.png"
+  ],
+  "protocol_sources": [
+    "https://ehwiki.org/wiki/Favorites",
+    "https://github.com/EhViewer-NekoInverter/EhViewer/blob/9e1021640472ee45f35c0bb1950723db08549b9e/app/src/main/java/com/hippo/ehviewer/client/EhEngine.kt#L362-L390"
+  ],
+  "limits": [
+    "Neutral isolated server fixtures andcontrolled URLProtocol;real account favorite changes not performed",
+    "Phone installation andreal favorite state acceptance areseparate stages"
+  ],
+  "published": false,
+  "phone_install_attempted_at_verification": false
+}

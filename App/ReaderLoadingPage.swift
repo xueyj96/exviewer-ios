@@ -6,6 +6,18 @@ struct ReaderLoadingPage: View {
     var metadata = false
     var failure: String? = nil
     var retry: (() -> Void)? = nil
+    var interactions = CanvasInteractions()
+
+    private var contentGestures: some Gesture {
+        LongPressGesture(minimumDuration: 0.5, maximumDistance: 10)
+            .onEnded { _ in interactions.longPress?() }
+            .exclusively(before:
+                SpatialTapGesture(count: 2, coordinateSpace: .global)
+                    .onEnded { _ = interactions.doubleTap?($0.location) }
+                    .exclusively(before:
+                        SpatialTapGesture(coordinateSpace: .global)
+                            .onEnded { interactions.singleTap?($0.location) }))
+    }
 
     private var phaseText: String {
         if metadata { return "正在读取页面信息…" }
@@ -29,6 +41,8 @@ struct ReaderLoadingPage: View {
     var body: some View {
         ZStack {
             Color.black
+                .contentShape(Rectangle())
+                .gesture(contentGestures)
             VStack(spacing: 10) {
                 Text("第 \(index) 页").font(.subheadline.monospacedDigit())
                 if let failure {
@@ -50,6 +64,8 @@ struct ReaderLoadingPage: View {
             }
             .foregroundStyle(.white.opacity(0.7))
             .padding(24)
+            .allowsHitTesting(failure != nil && retry != nil)
+            .gesture(contentGestures)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("reader.page.loading.\(index)")

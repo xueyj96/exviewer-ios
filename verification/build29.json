@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T09:40:51.473012+00:00",
+  "version": "0.1.0",
+  "build": "29",
+  "stage": "LOCAL_IMPLEMENTATION_RELEASE_BUILD_AND_SIMULATOR_VERIFIED",
+  "base_commit": "f2a4b84aacf3954156943402ff195919281d75e3",
+  "source_state": "UNCOMMITTED_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "34cdff1956b5f05a242ff5b62b77546d675ee311db254e35f1669dfc23b47949",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "implemented": {
+    "search": [
+      "Detail author starts independent query; structured/inline edits replace previous positive authors and retain other filters",
+      "Identical terms case-insensitively deduplicate before real site limit validation; multiword author and editing spaces preserved",
+      "Filter icon opens filters; malformed inline input stays editable; visible errors identify actual count",
+      "Recent/common entrypoints load draft only; Cancel preserves current results; Clear affects current draft until Search",
+      "Edited common query does not auto-overwrite saved source; explicit Save updates or saves separately",
+      "Tag editor initializes current selection, inherits new-tag matching mode, commits complete selection once; Cancel discards edits"
+    ],
+    "hierarchy": {
+      "tabs": [
+        "发现",
+        "书架",
+        "我的"
+      ],
+      "history": "Discover clock opens independent阅读历史; existing reading records/page progress/sort reused",
+      "shelf": [
+        "站点收藏",
+        "手动下载",
+        "本机书签"
+      ],
+      "search_records": "Unified records/common page inside composer; shared data unchanged"
+    },
+    "refactor": [
+      "Removed duplicate unused SearchFilters and common-manager implementations",
+      "Extracted GalleryFeedViewport and deterministic anchor selection",
+      "Publish scroll anchor only when it changes"
+    ],
+    "data_effect": "No migration, deletion, new browsing-history semantics, or account-file rewrite introduced",
+    "network_effect": "No change to media quality, cache capacity, prefetch range, request concurrency, or site search constraints"
+  },
+  "tests": {
+    "core_package_passed": 54,
+    "native_unique_latest_passed": 29,
+    "functional_UI_unique_latest_passed": 25,
+    "performance_UI_passed": 1,
+    "unresolved_required_case_failures": 0,
+    "counting": "Unique targeted cases at latest applicable outcome across4runs; earlier failures retained; not an all-tests single-green run",
+    "matrix": "QA/search-interaction29/test-matrix.json",
+    "core_log": "QA/search-interaction29/core.log",
+    "runs": [
+      "20261029T084113Z",
+      "20261029T085554Z",
+      "20261029T090916Z",
+      "20261029T092651Z"
+    ],
+    "version_delta": "Test executable build28; final packaging changes build metadata to29 only; identical final App/Core runtime sources"
+  },
+  "performance": {
+    "environment": "ExViewer QA iOS27 Simulator;offline neutral fixtures",
+    "workload": "1000items/4local cover variants;same warmup,3measured iterations,4up+4down fast swipes each",
+    "cpu_seconds_mean": {
+      "before": 6.694000218,
+      "after": 3.350624030666667,
+      "reduction_percent": 49.945863137904865
+    },
+    "physical_peak_kB_mean": {
+      "before": 61000.344,
+      "after": 50181.44266666667,
+      "reduction_percent": 17.735803806833168
+    },
+    "clock_seconds_mean": {
+      "before": 21.424615108,
+      "after": 21.694264236000002
+    },
+    "scroll_interval_seconds_mean": {
+      "before": 2.5769934306666666,
+      "after": 2.5718886110000003
+    },
+    "deterministic_publication_test": {
+      "frames": 240,
+      "before": 240,
+      "after": 6,
+      "same_final_anchor": true
+    },
+    "comparison": "QA/search-interaction29/performance/comparison.json",
+    "limits": [
+      "Simulator only;not physical-device acceptance",
+      "Only3samples per variant;no tail latency claim",
+      "FPS/hitch/frame count unavailable",
+      "No real network speed or memory-leak conclusion"
+    ]
+  },
+  "recovery": "Per-file pre-change copies retained under QA/search-interaction29/before; immutable prior build28 remains separate; new candidate does not overwrite old package",
+  "phone_install_attempted": false,
+  "physical_or_real_account_acceptance": "NOT_EXERCISED",
+  "committed_pushed_or_published": false,
+  "release_build": {
+    "result": "SUCCEEDED",
+    "configuration": "Release",
+    "log": "QA/search-interaction29/release29-build.log",
+    "codesigning": "DISABLED_FOR_LOCAL_REVIEW",
+    "version": "0.1.0 (29)"
+  }
+}

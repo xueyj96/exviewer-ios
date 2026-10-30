@@ -42,6 +42,9 @@ private enum BrowserPreferenceDefaults {
     @StateObject private var downloads: DownloadManager
     @Environment(\.scenePhase) private var scenePhase
     init() {
+        if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-reset-library-sort") {
+            UserDefaults(suiteName: LibrarySortPreferences.qaSuite)?.removePersistentDomain(forName: LibrarySortPreferences.qaSuite)
+        }
         if AppMode.qa && !ProcessInfo.processInfo.arguments.contains("--qa-keep-site-preference") {
             BrowserPreferenceDefaults.store.set(GallerySite.ex.rawValue, forKey: "browser.site")
         }
@@ -50,6 +53,14 @@ private enum BrowserPreferenceDefaults {
         }
         let session = SiteSession(qa: AppMode.qa), library = LibraryStore(qa: AppMode.qa)
         library.load(owner: session.owner)
+        if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") {
+            for gallery in QASamples.galleries.prefix(3) { library.bookmark(gallery) }
+            library.remember(QASamples.galleries[0], page: 2)
+            library.load(owner: session.owner)
+        }
+        if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-offline-layout") {
+            QASamples.installOfflineSample(in: library)
+        }
         _session = StateObject(wrappedValue: session); _library = StateObject(wrappedValue: library)
         _downloads = StateObject(wrappedValue: DownloadManager(session: session, library: library))
     }
@@ -96,7 +107,8 @@ struct RootView: View {
         CompactMainTabs(selection: $selection) {
             TabView(selection: $selection) {
                 NavigationStack(path: $discoveryPath) {
-                    DiscoverView(query: $search, site: browserSiteBinding, editingSaved: $editingSaved, runRevision: searchRun)
+                    DiscoverView(query: $search, site: browserSiteBinding, editingSaved: $editingSaved, runRevision: searchRun,
+                                 onSearchTag: useTag)
                         .navigationDestination(for: Gallery.self) {
                             GalleryDetailView(gallery: $0, onSearchTag: useTag)
                                 .toolbar(.visible, for: .navigationBar)
@@ -105,7 +117,7 @@ struct RootView: View {
                 .toolbar(.hidden, for: .tabBar)
                 .tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(0)
                 NavigationStack(path: $libraryPath) {
-                    LibraryView(site: browserSiteBinding, useSearch: useSearch)
+                    LibraryView(site: browserSiteBinding, isActive: selection == 1)
                         .navigationDestination(for: Gallery.self) {
                             GalleryDetailView(gallery: $0, onSearchTag: useTag)
                                 .toolbar(.visible, for: .navigationBar)
@@ -117,10 +129,21 @@ struct RootView: View {
                     AccountView(site: settingsSiteBinding) { useTag($0, browserSite) }
                 }
                 .toolbar(.hidden, for: .tabBar)
-                .tabItem { Label("账号", systemImage: "person.crop.circle") }.tag(2)
+                .tabItem { Label("我的", systemImage: "person.crop.circle") }.tag(2)
             }
         }
         .id(session.generation)
+        .overlay(alignment: .bottom) {
+            if let notice = library.readLaterNotice {
+                Text(notice.text).font(.caption).padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(FloatingChrome.background, in: Capsule()).padding(.bottom, 68)
+                    .allowsHitTesting(false).accessibilityIdentifier("read-later.feedback")
+                    .task(id: notice.id) {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        guard !Task.isCancelled else { return }; library.dismissReadLaterNotice(notice.id)
+                    }
+            }
+        }
         .onChange(of: session.generation) { _, _ in
             discoveryPath = NavigationPath(); libraryPath = NavigationPath(); accountPath = NavigationPath()
         }
@@ -132,13 +155,15 @@ struct RootView: View {
             else { ReaderView(gallery: QASamples.galleries[0]) }
         }
     }
-    private func useSearch(_ saved: SavedSearch) {
-        browserSite = saved.site; search = saved.query; editingSaved = saved.id
-        discoveryPath = NavigationPath(); searchRun = UUID(); selection = 0
-    }
     private func useTag(_ tag: GalleryTag, _ sourceSite: GallerySite) {
         browserSite = sourceSite
-        search.rules.removeAll { $0.id == tag.id }; search.rules.append(.init(tag: tag)); editingSaved = nil
+        if tag.namespace == "artist" {
+            search = SearchQuery()
+            search.replaceArtist(tag.name)
+        } else {
+            search.rules.removeAll { $0.id == tag.id }; search.rules.append(.init(tag: tag))
+        }
+        editingSaved = nil
         discoveryPath = NavigationPath(); searchRun = UUID(); selection = 0
     }
 }
@@ -158,20 +183,6 @@ struct StatusMessage: View {
 
 enum GalleryLayout { case list, grid }
 
-struct GalleryFeedViewport {
-    var space: String
-    var height: CGFloat
-    var topOcclusion: CGFloat = 0
-
-    static func restorationID(for galleryID: String) -> String { "feed.restore.\(galleryID)" }
-
-    // The restoration marker is one point high, independent of the cover's
-    // aspect ratio. Align that marker immediately below the floating header.
-    var restorationAlignment: UnitPoint {
-        UnitPoint(x: 0.5, y: min(max(0, topOcclusion) / max(1, height - 1), 1))
-    }
-}
-
 private struct GalleryCellFrames: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
@@ -183,6 +194,7 @@ struct GalleryRows: View {
     var galleries: [Gallery]
     var layout: GalleryLayout = .list
     var freezeGridLayout = false
+    var sourceIdentity: String? = nil
     var selectionStore: LibrarySelectionStore? = nil
     var onLongPressSelect: ((Gallery) -> Void)? = nil
     var onBookmarkToggle: ((Gallery) -> Void)? = nil
@@ -194,6 +206,8 @@ struct GalleryRows: View {
     @State private var preparedVisible: [Gallery]?
     @State private var preparedUnknown = 0
     @State private var preparedColumns: [[Gallery]]?
+    @State private var placement = GalleryGridPlacement()
+    @State private var placementSource: String?
     @State private var lastAutomaticAnchor: String?
     private var visible: [Gallery] { preparedVisible ?? filterGalleries().visible }
     private var unknown: Int { preparedVisible == nil ? filterGalleries().unknown : preparedUnknown }
@@ -227,6 +241,8 @@ struct GalleryRows: View {
         .onAppear(perform: prepareLayout)
         .onChange(of: galleries) { _, _ in prepareLayout() }
         .onChange(of: library.blockedIDs) { _, _ in prepareLayout() }
+        .onChange(of: library.owner) { _, _ in prepareLayout() }
+        .onChange(of: sourceIdentity) { _, _ in prepareLayout() }
         .onReceive(aspectCache.revisionChanges) { _ in if !freezeGridLayout { prepareColumns() } }
         .onChange(of: freezeGridLayout) { _, frozen in if !frozen { prepareColumns() } }
         .onPreferenceChange(GalleryCellFrames.self, perform: observedFrames)
@@ -252,9 +268,8 @@ struct GalleryRows: View {
 
     private func observedFrames(_ frames: [String: CGRect]) {
         guard let viewport, viewport.height > 0 else { return }
-        let visibleTop = min(max(0, viewport.topOcclusion), viewport.height)
-        let inView = frames.filter { $0.value.maxY > visibleTop && $0.value.minY < viewport.height }
-        let anchor = inView.min(by: { abs($0.value.minY - visibleTop) < abs($1.value.minY - visibleTop) })?.key
+        let visibleTop = viewport.contentTop
+        let anchor = viewport.nearestVisibleAnchor(in: frames)
         if let anchor {
             onVisibleAnchor?(anchor)
         }
@@ -285,31 +300,39 @@ struct GalleryRows: View {
                     .highPriorityGesture(LongPressGesture(minimumDuration: 0.55)
                         .onEnded { _ in onLongPressSelect(gallery) })
             } else if onBookmarkToggle != nil {
-                link.buttonStyle(.plain)
-                    .accessibilityIdentifier("favorites.gallery.\(gallery.ref.gid)")
-                    .contextMenu { gridContextMenu(for: gallery) }
+                if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") {
+                    link.buttonStyle(.plain).accessibilityIdentifier("favorites.gallery.\(gallery.ref.gid)")
+                        .accessibilityLabel(selectionLabel(gallery))
+                        .contextMenu { gridContextMenu(for: gallery) }
+                } else {
+                    link.buttonStyle(.plain)
+                        .accessibilityIdentifier("favorites.gallery.\(gallery.ref.gid)")
+                        .contextMenu { gridContextMenu(for: gallery) }
+                }
             } else {
                 link.buttonStyle(.plain).accessibilityIdentifier("gallery.open.\(gallery.ref.gid)")
+                    .contextMenu { gridContextMenu(for: gallery) }
                 }
         }
     }
 
     private func selectionLabel(_ gallery: Gallery) -> String {
-        guard AppMode.qa, ProcessInfo.processInfo.arguments.contains("--qa-library-delayed-covers") else { return gallery.title }
+        guard AppMode.qa, ProcessInfo.processInfo.arguments.contains("--qa-library-delayed-covers") || ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") else { return gallery.title }
         return gallery.title + (CoverAspectCache.shared.hasAspect(for: gallery) ? "，封面已载入" : "，封面载入中")
     }
 
     @ViewBuilder private func gridContextMenu(for gallery: Gallery) -> some View {
-        if onBookmarkToggle != nil {
             NavigationLink(value: gallery) { Label("打开详情", systemImage: "book.closed") }
-            Button { onBookmarkToggle?(gallery) } label: {
-                Label("切换本机书签", systemImage: "bookmark")
-            }
-        }
+            Button {
+                if let onBookmarkToggle { onBookmarkToggle(gallery) }
+                else { library.toggleReadLater(gallery) }
+            } label: {
+                Label(library.containsReadLater(gallery) ? "移出稍后再读" : "加入稍后再读", systemImage: "text.badge.plus")
+            }.accessibilityIdentifier("gallery.read-later.\(gallery.ref.gid)")
     }
 
-    /// Assign each item to the currently shorter column. Cover aspect ratios are
-    /// updated from image metadata as visible cells finish loading.
+    /// Existing cards keep their columns; only appended cards use the current
+    /// height estimates. Ratio updates can resize a cover within its own column.
     private var gridColumns: [[Gallery]] { preparedColumns ?? makeGridColumns(for: visible) }
 
     private func filterGalleries() -> (visible: [Gallery], unknown: Int) {
@@ -317,23 +340,28 @@ struct GalleryRows: View {
     }
 
     private func prepareLayout() {
+        let source = "\(library.owner)|\(sourceIdentity ?? "")"
+        if placementSource != source { placement = GalleryGridPlacement(); placementSource = source }
         let result = filterGalleries()
         preparedVisible = result.visible
         preparedUnknown = result.unknown
-        preparedColumns = makeGridColumns(for: result.visible)
+        prepareColumns(for: result.visible)
     }
 
-    private func prepareColumns() { preparedColumns = makeGridColumns(for: visible) }
+    private func prepareColumns() { prepareColumns(for: visible) }
+
+    private func prepareColumns(for items: [Gallery]) {
+        let aspects = Dictionary(items.map { ($0.id, Double(aspectCache.aspect(for: $0))) }, uniquingKeysWith: { first, _ in first })
+        placement.update(ids: items.map(\.id), aspects: aspects)
+        let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        preparedColumns = placement.columns.map { $0.compactMap { byID[$0] } }
+    }
 
     private func makeGridColumns(for visible: [Gallery]) -> [[Gallery]] {
-        var columns = [ [Gallery](), [Gallery]() ]
-        var heights: [CGFloat] = [0, 0]
-        for gallery in visible {
-            let column = heights[0] <= heights[1] ? 0 : 1
-            columns[column].append(gallery)
-            heights[column] += 1 / CoverAspectCache.shared.aspect(for: gallery) + 0.36
-        }
-        return columns
+        var initial = GalleryGridPlacement()
+        let byID = Dictionary(visible.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        initial.update(ids: visible.map(\.id), aspects: byID.mapValues { Double(aspectCache.aspect(for: $0)) })
+        return initial.columns.map { $0.compactMap { byID[$0] } }
     }
 }
 
@@ -475,6 +503,7 @@ struct CoverView: View {
     @State private var fileContext: String?
     @State private var failure: String?
     @State private var retry = UUID()
+    private var storedCoverQA: Bool { AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") }
     private struct RequestIdentity: Hashable { var owner: String; var gallery: String; var cover: URL?; var revision: UUID; var retry: UUID }
     private var requestIdentity: RequestIdentity { .init(owner: library.owner, gallery: gallery.id, cover: gallery.cover, revision: session.generation, retry: retry) }
     private var contextIdentity: String { "\(library.owner)|\(session.generation.uuidString)" }
@@ -495,7 +524,7 @@ struct CoverView: View {
                         }
                     }
             }
-            else if AppMode.qa { QACover(seed: Int(gallery.ref.gid)) }
+            else if AppMode.qa && !storedCoverQA { QACover(seed: Int(gallery.ref.gid)) }
             else if let failure {
                 VStack(spacing: 4) {
                     Text(failure).font(.caption2).lineLimit(3).multilineTextAlignment(.center).foregroundStyle(.secondary)
@@ -503,11 +532,10 @@ struct CoverView: View {
                         .buttonStyle(.borderless).accessibilityLabel("重新载入封面").accessibilityHint(failure)
                 }.padding(5)
             }
-            else if gallery.cover != nil { ProgressView() }
-            else { Image(systemName: "book.closed").font(.title).foregroundStyle(Palette.accent.opacity(0.4)) }
+            else { ProgressView() }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("cover.media.\(gallery.ref.gid)")
-        .accessibilityValue(file == nil ? "载入中" : "已载入")
+        .accessibilityValue(file == nil ? (failure == nil ? "载入中" : "载入失败") : "已载入")
         .task(id: requestIdentity) {
             guard !Task.isCancelled else { return }
             // Keep a successfully displayed image while the same gallery is
@@ -515,9 +543,13 @@ struct CoverView: View {
             failure = nil
             let currentContext = contextIdentity
             if fileContext != currentContext { file = nil; fileContext = nil }
-            if AppMode.qa {
+            if AppMode.qa && !storedCoverQA {
                 if ProcessInfo.processInfo.arguments.contains("--qa-library-delayed-covers") {
                     try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                if ProcessInfo.processInfo.arguments.contains("--qa-grid-aspect-delay") {
+                    try? await Task.sleep(nanoseconds: 15_000_000_000)
                     guard !Task.isCancelled else { return }
                 }
                 let fixture = gallery.cover.flatMap { $0.isFileURL ? $0 : nil } ?? QASamples.cover(seed: Int(gallery.ref.gid))
@@ -525,11 +557,27 @@ struct CoverView: View {
                 if let ratio = await coverAspectRatio(at: fixture) { CoverAspectCache.shared.set(ratio, for: gallery) }
                 return
             }
-            guard let cover = gallery.cover else { return }
             let revision = session.generation, owner = library.owner
             do {
                 failure = nil
-                let result = try await MediaRepository.shared.file(for: cover, owner: owner, priority: .thumbnail)
+                let cover: URL
+                if let source = gallery.cover { cover = source }
+                else {
+                    cover = try await StoredCoverResolver.shared.source(for: gallery, context: currentContext) { batch in
+                        if storedCoverQA {
+                            if ProcessInfo.processInfo.arguments.contains("--qa-stored-cover-missing") { return batch }
+                            return batch.map { value in
+                                var resolved = value; resolved.cover = QASamples.cover(seed: Int(value.ref.gid)); return resolved
+                            }
+                        }
+                        return try await StoredCoverResolver.metadata(batch, session: session)
+                    }
+                }
+                try Task.checkCancellation()
+                guard revision == session.generation, owner == library.owner else { return }
+                let result: URL
+                if storedCoverQA { result = cover }
+                else { result = try await MediaRepository.shared.file(for: cover, owner: owner, priority: .thumbnail) }
                 try Task.checkCancellation()
                 guard revision == session.generation, owner == library.owner else { return }
                 fileContext = currentContext; file = result
@@ -540,7 +588,11 @@ struct CoverView: View {
                     CoverAspectCache.shared.set(ratio, for: gallery)
                 }
             } catch is CancellationError { }
-            catch { guard revision == session.generation, owner == library.owner else { return }; failure = ErrorMessages.message(error) }
+            catch {
+                guard revision == session.generation, owner == library.owner else { return }
+                StoredCoverResolver.shared.invalidate(gallery.ref, context: currentContext)
+                failure = (error as? StoredCoverResolver.Failure)?.errorDescription ?? ErrorMessages.message(error)
+            }
         }
     }
 }

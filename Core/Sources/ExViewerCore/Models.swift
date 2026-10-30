@@ -79,8 +79,14 @@ public struct GalleryDetail: Sendable {
     public var next: URL?
     public var archive: URL?
     public var favoriteName: String?
-    public init(gallery: Gallery, pages: [GalleryPage], next: URL?, archive: URL?, favoriteName: String?) {
+    public var favoriteStateKnown: Bool
+    public var favoriteState: GalleryFavoriteState {
+        guard favoriteStateKnown else { return .unknown }
+        return favoriteName.map { .favorited($0) } ?? .notFavorited
+    }
+    public init(gallery: Gallery, pages: [GalleryPage], next: URL?, archive: URL?, favoriteName: String?, favoriteStateKnown: Bool = true) {
         self.gallery = gallery; self.pages = pages; self.next = next; self.archive = archive; self.favoriteName = favoriteName
+        self.favoriteStateKnown = favoriteStateKnown
     }
 }
 

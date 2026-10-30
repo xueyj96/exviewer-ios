@@ -33,6 +33,13 @@ public struct SearchQuery: Codable, Equatable, Sendable {
     public var requireTorrent = false
     public init() {}
 
+    /// An explicit edit of the single-author field replaces previous positive
+    /// author tags. Deliberate OR/exclusion rules and other filters remain.
+    public mutating func replaceArtist(_ value: String) {
+        artist = value
+        rules.removeAll { ["artist", "a"].contains($0.tag.namespace.lowercased()) && $0.match == .all }
+    }
+
     private func quote(_ text: String) throws -> String {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.contains("\""), !text.contains("\\"), !text.contains(where: { $0.isNewline || $0.asciiValue.map { $0 < 32 } == true }) else {
@@ -42,20 +49,27 @@ public struct SearchQuery: Codable, Equatable, Sendable {
     }
     public func expression() throws -> String {
         var terms: [String] = []
+        var seen = Set<String>()
+        var includes = 0, excludes = 0
+        func append(_ term: String, counted: Bool = true, excluded: Bool = false) {
+            guard seen.insert(term.lowercased()).inserted else { return }
+            terms.append(term)
+            if counted {
+                if excluded { excludes += 1 } else { includes += 1 }
+            }
+        }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = value.isEmpty ? [] : (matchPhrase ? [value] : value.split(whereSeparator: \.isWhitespace).map(String.init))
-        for keyword in keywords { terms.append((titleOnly ? "title:" : "") + (try quote(keyword))) }
-        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { terms.append("artist:" + (try quote(artist.lowercased())) + "$") }
-        if !uploader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { terms.append("uploader:" + (try quote(uploader))) }
-        var includes = keywords.count + (artist.isEmpty ? 0 : 1)
-        var excludes = 0
+        for keyword in keywords { append((titleOnly ? "title:" : "") + (try quote(keyword))) }
+        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { append("artist:" + (try quote(artist.lowercased())) + "$") }
+        if !uploader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { append("uploader:" + (try quote(uploader)), counted: false) }
         for rule in rules {
             guard !rule.tag.name.isEmpty, rule.tag.namespace.allSatisfy({ $0.isASCII && $0.isLetter }) else { throw ViewerError.invalidQuery("请使用 namespace:tag 格式的有效标签。") }
             let prefix = rule.match == .exclude ? "-" : rule.match == .any ? "~" : ""
-            terms.append(prefix + rule.tag.namespace.lowercased() + ":" + (try quote(rule.tag.name.lowercased())) + "$")
-            if rule.match == .exclude { excludes += 1 } else { includes += 1 }
+            append(prefix + rule.tag.namespace.lowercased() + ":" + (try quote(rule.tag.name.lowercased())) + "$", excluded: rule.match == .exclude)
         }
-        guard includes <= 5, excludes <= 10 else { throw ViewerError.invalidQuery("站点每次最多支持 5 个包含条件和 10 个排除条件。") }
+        guard includes <= 5 else { throw ViewerError.invalidQuery("包含条件共 \(includes) 个，超过站点上限 5 个；作者、关键词与标签合计计算，请在筛选中删减。") }
+        guard excludes <= 10 else { throw ViewerError.invalidQuery("排除条件共 \(excludes) 个，超过站点上限 10 个，请在筛选中删减。") }
         let expression = terms.joined(separator: " ")
         guard expression.count <= 200 else { throw ViewerError.invalidQuery("搜索条件超过站点 200 字符限制，请减少条件。") }
         return expression

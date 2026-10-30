@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T14:48:44.849815+00:00",
+  "version": "0.1.0",
+  "build": "35",
+  "stage": "LOCAL_STABLE_FULL_SCREEN_READER_POSITION_RELEASE_AND_TARGETED_CHECKS_VERIFIED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "8122ccf3edaa464375ef868d4b98dc3fa0c6f7de5da23f4a9d5395fb11d5c9b0",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build34": [
+    "App/MediaCanvas.swift",
+    "App/ReaderView.swift"
+  ],
+  "implemented": [
+    "Reader content always fills the complete window regardless ofchrome visibility",
+    "Top andbottom controls overlay content;no bottom safeAreaInset resizes fitted image",
+    "Continuous scroll content margins arezero;image zoom scroll view neverauto-adjusts content insets",
+    "Fitted image usesfull-window center;zoomed/panned image andcontinuous scroll keep their original screen positions",
+    "Actual UIKit image/viewport rect,zoom,offset andcanvas identity areverified withQA-only live readback"
+  ],
+  "network_loading_storage_policy_changed": false,
+  "tests": {
+    "counting": "Four unique targeted UI cases at latest applicable result across three test runs;final green bundle contains2 cases;not a full-suite run",
+    "UI_unique_latest_passed": 4,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerUITests.ReaderImmersionV34UITests testLoadedImageDoubleTapDetailsAndLongPressImmersionPreservePageAndZoom": {
+        "result": "passed",
+        "duration_seconds": 45.38,
+        "raw_log": "QA/Simulator-20261029T143357Z-test.log",
+        "xcresult": "QA/Simulator-20261029T143357Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.ReaderPositionV35UITests testContinuousLongPageKeepsItsScrolledPositionWhenChromeToggles": {
+        "result": "passed",
+        "duration_seconds": 56.836,
+        "raw_log": "QA/Simulator-20261029T144506Z-test.log",
+        "xcresult": "QA/Simulator-20261029T144506Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderPositionV35UITests testFittedImageUsesTheWholeScreenAndDoesNotMoveWhenChromeToggles": {
+        "result": "passed",
+        "duration_seconds": 24.635,
+        "raw_log": "QA/Simulator-20261029T144506Z-test.log",
+        "xcresult": "QA/Simulator-20261029T144506Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderPositionV35UITests testZoomAndPanStayAtTheSameScreenPositionWhenChromeToggles": {
+        "result": "passed",
+        "duration_seconds": 21.368,
+        "raw_log": "QA/Simulator-20261029T143357Z-test.log",
+        "xcresult": "QA/Simulator-20261029T143357Z.xcresult",
+        "bundle_finalized": false
+      }
+    },
+    "prior_failed_precondition_cases": [
+      {
+        "case": "ExViewerUITests.ReaderPositionV35UITests testContinuousLongPageKeepsItsScrolledPositionWhenChromeToggles",
+        "result": "failed",
+        "duration_seconds": 30.603,
+        "raw_log": "QA/Simulator-20261029T143357Z-test.log",
+        "xcresult": "QA/Simulator-20261029T143357Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.ReaderPositionV35UITests testContinuousLongPageKeepsItsScrolledPositionWhenChromeToggles",
+        "result": "failed",
+        "duration_seconds": 43.912,
+        "raw_log": "QA/Simulator-20261029T143944Z-test.log",
+        "xcresult": "QA/Simulator-20261029T143944Z.xcresult",
+        "bundle_finalized": false
+      }
+    ],
+    "initial_compile_failure": "QA/Simulator-20261029T143150Z-build.log;ambiguous CGFloat initializer in test parser fixed without runtime changes",
+    "long_page_precondition_failures": "Earlier fixed drag sequences hadnot reached interior;final setup uses atmost4 visible drags until original minY below-20 criterion ismet",
+    "comparison_threshold_unchanged": true,
+    "runtime_unchanged_across_UI_runs": true,
+    "measurements": "QA/reader-position35/measured-positions.json",
+    "completed_green_recheck": "QA/Simulator-20261029T144506Z.xcresult",
+    "native_or_core_tests_rerun": false
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/reader-position35/release35-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/reader-position35/attachments/5CD3C11D-624F-4677-8D0A-6550FD468F73.png",
+      "name": "reader35.centered-immersive_0_14F85E73-8C5F-4D13-9736-C625A7E0E8F3.1",
+      "sha256": "c429d2947cb72efd0b3f814aa667b1f88ffa46b4d81e9f1a897b1662a1247dd0",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/reader-position35/attachments/704A6E3F-2940-4691-A8F4-7217334EB082.png",
+      "name": "reader35_0_2C73C98A-9693-482A-88D5-E599558B0E37.centered-normal",
+      "sha256": "c1c35198ce31be65bd7db146a1338a345e692ac93a9e8ff69aab0ee41ccd1241",
+      "visually_inspected": true
+    }
+  ],
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "pushed_or_published": false
+}

@@ -142,6 +142,7 @@ private struct ReaderPageFrames: PreferenceKey {
 struct ReaderView: View {
     var gallery: Gallery
     var offline = false
+    var onSearchTag: ((GalleryTag, GallerySite) -> Void)? = nil
     @EnvironmentObject private var session: SiteSession
     @EnvironmentObject private var library: LibraryStore
     @Environment(\.dismiss) private var dismiss
@@ -171,6 +172,9 @@ struct ReaderView: View {
     @State private var progressTarget = 1.0
     @State private var pageZoomed = false
     @State private var settings = false
+    @State private var detailsShowing = false
+    @State private var immersive = false
+    @State private var pendingTagSearch: (tag: GalleryTag, site: GallerySite)?
     @State private var jump = false
     @State private var jumpText = ""
     @State private var findingPage = false
@@ -186,6 +190,9 @@ struct ReaderView: View {
     @State private var slideRevision = UUID()
     @State private var slideTask: Task<Void, Never>?
     @State private var historyCheckpoint: ReaderHistoryCheckpoint?
+    @StateObject private var favoriteObservation = GalleryFavoriteObservation()
+    @State private var favoriteEditing = false
+    @State private var favoriteAfterSettings = false
     @State private var singleDragActive = false
     @State private var singleDragFinishing = false
     @State private var singleDragOffset: CGFloat = 0
@@ -214,6 +221,7 @@ struct ReaderView: View {
     @State private var readingContext: ReadingContext?
     var body: some View {
         NavigationStack {
+            ZStack(alignment: .top) {
             VStack(spacing: 0) {
                 if let error = model.error, model.pages.isEmpty || mode == ReaderMode.continuous.rawValue { StatusMessage(title: error) { Task { guard let context = readingContext, isCurrent(context) else { return }; await model.load(gallery: gallery, offline: offline, session: session, library: library) } } }
                 if model.loading && model.pages.isEmpty { Spacer(); ProgressView(); Spacer() }
@@ -224,24 +232,18 @@ struct ReaderView: View {
                         } else {
                             singlePage.simultaneousGesture(singleDragGesture(size: geometry.size), including: pageZoomed ? .subviews : .all)
                         }
-                        edgeControls(size: geometry.size).allowsHitTesting(!pageZoomed && (!singleDragActive || singleDragFinishing))
                     }
                     .contentShape(Rectangle())
                     .onAppear { updateViewportFrame(geometry.frame(in: .global)) }
                     .onChange(of: geometry.frame(in: .global)) { _, frame in updateViewportFrame(frame) }
+                    .accessibilityAction(named: Text("下一页")) { changePage(by: 1) }
+                    .accessibilityAction(named: Text("上一页")) { changePage(by: -1) }
+                    .accessibilityAction(named: Text(immersive ? "显示阅读控件" : "隐藏阅读控件")) { toggleImmersive() }
                 }
             }
-                .safeAreaInset(edge: .bottom, spacing: 0) { readerControls }
+                .ignoresSafeArea(.container)
                 .background(Color.black)
-                .navigationTitle(gallery.title).navigationBarTitleDisplayMode(.inline).appNavigationChrome()
-                .toolbar {
-                    if #available(iOS 26.0, *) {
-                        ToolbarItem(placement: .cancellationAction) { closeButton }
-                            .sharedBackgroundVisibility(.hidden)
-                    } else {
-                        ToolbarItem(placement: .cancellationAction) { closeButton }
-                    }
-                }
+                .toolbar(.hidden, for: .navigationBar)
                 .preferredColorScheme(.dark)
                 .task {
                     let context = ReadingContext(generation: session.generation, owner: library.owner)
@@ -314,6 +316,7 @@ struct ReaderView: View {
                     let page = current; Task { await seek(page) }
                 }
                 .onChange(of: settings) { _, shown in if shown { progressHUD = false; stopTrackingScroll(); cancelSingleDrag() } }
+                .onChange(of: detailsShowing) { _, shown in if shown { progressHUD = false; stopTrackingScroll(); cancelSingleDrag() } }
                 .onChange(of: singleFingerDown) { _, down in
                     if !down {
                         let intent = seekRevision
@@ -325,7 +328,37 @@ struct ReaderView: View {
                 }
                 .alert("跳转到页码", isPresented: $jump) { TextField("页码", text: $jumpText).keyboardType(.numberPad); Button("跳转") { if let page = Int(jumpText) { Task { await seek(page) } } }; Button("取消", role: .cancel) { } } message: { Text("动图完整播放，按一张图片计算一页。") }
                 .overlay(alignment: .top) { if findingPage { ProgressView("正在定位页面").font(.caption).padding(8).allowsHitTesting(false) } }
-                .sheet(isPresented: $settings) { readerSettings }
+                .sheet(isPresented: $settings, onDismiss: {
+                    if favoriteAfterSettings { favoriteAfterSettings = false; favoriteEditing = true }
+                }) { readerSettings }
+                .sheet(isPresented: $detailsShowing, onDismiss: {
+                    if let pending = pendingTagSearch {
+                        pendingTagSearch = nil
+                        onSearchTag?(pending.tag, pending.site)
+                    }
+                }) {
+                    NavigationStack {
+                        GalleryDetailView(gallery: gallery, onResumeReading: { detailsShowing = false },
+                                          allowsTagSearch: onSearchTag != nil) { tag, site in
+                            pendingTagSearch = (tag, site); detailsShowing = false
+                        }
+                    }
+                    .statusBarHidden(false)
+                    .accessibilityIdentifier("reader.details")
+                }
+                if !immersive { readerHeader }
+            }
+            .overlay(alignment: .bottom) { if !immersive { readerControls } }
+        }
+        .statusBarHidden(immersive && !settings && !detailsShowing)
+        .persistentSystemOverlays(immersive ? .hidden : .automatic)
+        .preference(key: MainTabsHiddenPreference.self, value: offline)
+        .onDisappear { favoriteObservation.cancel() }
+        .onAppear(perform: bindFavoriteState)
+        .onChange(of: GalleryFavoriteScope(gallery, session)) { _, _ in bindFavoriteState() }
+        .onReceive(session.favoriteStateCache.$revision) { _ in favoriteObservation.syncFromCache() }
+        .sheet(isPresented: $favoriteEditing) {
+            GalleryFavoriteEditorView(gallery: gallery, session: session, preparation: favoriteObservation.preparation(favoriteClient(for: gallery, session: session), reference: gallery.ref)) { favoriteObservation.accept($0, form: $1) }
         }
         .overlay {
             if progressHUD, let total = model.total {
@@ -341,6 +374,7 @@ struct ReaderView: View {
             if AppMode.qa || ReaderNetworkMetrics.enabled {
                 Text("QA").font(.system(size: 1)).foregroundStyle(.clear).frame(width: 1, height: 1)
                     .accessibilityIdentifier(AppMode.qa ? "reader.cache.qa" : "reader.metrics.state").accessibilityValue(cacheDiagnostic).allowsHitTesting(false)
+                    .background { if AppMode.qa { ReaderSystemChromeProbe().frame(width: 1, height: 1).allowsHitTesting(false) } }
             }
         }
     }
@@ -358,6 +392,7 @@ struct ReaderView: View {
                         .background { scrollOriginReporter }
                 }
             }
+            .contentMargins(.all, 0, for: .scrollContent)
             .scrollDisabled(pageZoomed)
             .scrollTargetBehavior(ReaderSnappingBehavior(ranges: visiblePageFrames.compactMap { index, rect in
                 guard pageSizes[index] != nil else { return nil }
@@ -407,7 +442,7 @@ struct ReaderView: View {
             ReaderPage(page: page, active: abs(page.index - current) <= 1,
                        file: media.files[page.index], failure: media.failures[page.index],
                        loading: media.inflight[page.index] != nil, progress: media.progress[page.index], animated: page.index == current,
-                       retry: { media.retry(page: page.index) }, onSingleTap: canvasTapped,
+                       retry: { media.retry(page: page.index) }, interactions: canvasInteractions,
                        onZoomChanged: { zoomed in
                            guard page.index == self.current,
                                  let expectedContext, self.readingContext == expectedContext,
@@ -481,7 +516,8 @@ struct ReaderView: View {
         } else {
             ReaderLoadingPage(index: index, metadata: true,
                               failure: offline ? "离线副本中没有这一页。" : (index == current ? singleMetadataError : nil),
-                              retry: offline || model.next == nil ? nil : { singleMetadataAttemptedTarget = nil; singleMetadataError = nil; updateMedia() })
+                              retry: offline || model.next == nil ? nil : { singleMetadataAttemptedTarget = nil; singleMetadataError = nil; updateMedia() },
+                              interactions: canvasInteractions)
         }
     }
 
@@ -489,7 +525,7 @@ struct ReaderView: View {
         let expected = readingContext
         return ReaderPage(page: page, active: true, file: media.files[page.index],
                           failure: media.failures[page.index], loading: media.inflight[page.index] != nil, progress: media.progress[page.index],
-                          animated: page.index == current, retry: { media.retry(page: page.index) }, onSingleTap: canvasTapped, onZoomChanged: { value in
+                          animated: page.index == current, retry: { media.retry(page: page.index) }, interactions: canvasInteractions, onZoomChanged: { value in
             guard page.index == current, let expected, isCurrent(expected) else { return }
             pageZoomed = value
         }, onImageSizeChanged: { size in
@@ -654,38 +690,6 @@ struct ReaderView: View {
         }
     }
 
-    private func edgeControls(size: CGSize) -> some View {
-        Group {
-            if direction.horizontal {
-                HStack(spacing: 0) {
-                    edgeButton(forward: direction == .rightToLeft, width: size.width * 0.24, height: size.height, alignment: .leading)
-                    Spacer(minLength: 0)
-                    edgeButton(forward: direction == .leftToRight, width: size.width * 0.24, height: size.height, alignment: .trailing)
-                }.frame(width: size.width, height: size.height)
-            } else {
-                VStack(spacing: 0) {
-                    edgeButton(forward: direction == .bottomToTop, width: size.width, height: size.height * 0.22, alignment: .top)
-                    Spacer(minLength: 0)
-                    edgeButton(forward: direction == .topToBottom, width: size.width, height: size.height * 0.22, alignment: .bottom)
-                }.frame(width: size.width, height: size.height)
-            }
-        }
-    }
-
-    private func edgeButton(forward: Bool, width: CGFloat, height: CGFloat, alignment: Alignment) -> some View {
-        Button { if !pageZoomed { changePage(by: forward ? 1 : -1) } } label: {
-            Image(systemName: forward ? direction.forwardSymbol : direction.backwardSymbol)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.72))
-                .frame(width: 52, height: 52)
-                .contentShape(Rectangle())
-        }
-        .frame(width: width, height: height, alignment: alignment)
-        .buttonStyle(.plain)
-        .accessibilityLabel(forward ? "下一页，\(direction.title)" : "上一页，\(direction.title)")
-        .accessibilityIdentifier(forward ? "reader.next" : "reader.previous")
-    }
-
     private var readerControls: some View {
         ViewThatFits(in: .horizontal) {
             readerControlRow(includeBookmark: true)
@@ -747,10 +751,11 @@ struct ReaderView: View {
                 Image(systemName: "ellipsis.circle").frame(width: 44, height: 44).contentShape(Rectangle())
             }.accessibilityLabel("阅读设置").accessibilityIdentifier("reader.settings")
             if includeBookmark {
-                Button { library.bookmark(gallery) } label: {
-                    Image(systemName: library.snapshot.bookmarks.contains(where: { $0.id == gallery.id }) ? "bookmark.fill" : "bookmark")
+                Button { favoriteEditing = true } label: {
+                    Image(systemName: { if case .favorited = favoriteObservation.state { return "star.fill" }; return "star" }())
                         .frame(width: 44, height: 44).contentShape(Rectangle())
-                }.accessibilityLabel("本机书签").accessibilityIdentifier("reader.bookmark")
+                }.accessibilityLabel("站点收藏").accessibilityValue(favoriteAccessibilityValue)
+                    .accessibilityIdentifier("reader.site-favorite")
             }
         }.font(.system(size: 18, weight: .medium))
     }
@@ -779,11 +784,14 @@ struct ReaderView: View {
                     }
                 }
                 Section {
-                    Button { library.bookmark(gallery) } label: {
-                        Label(library.snapshot.bookmarks.contains(where: { $0.id == gallery.id }) ? "移除本机书签" : "加入本机书签", systemImage: "bookmark")
+                    Button { favoriteAfterSettings = true; settings = false } label: {
+                        Label("站点收藏", systemImage: "star")
+                    }.accessibilityIdentifier("reader.settings.site-favorite")
+                    Button { library.toggleReadLater(gallery) } label: {
+                        Label(library.containsReadLater(gallery) ? "移出稍后再读" : "加入稍后再读", systemImage: "text.badge.plus")
                     }
                 }
-                Section { Text("连续模式和单页模式均可按所选方向阅读。单页模式可点按边缘或滑动翻页；动图按一页自动播放，双击图片缩放。")
+                Section { Text("点左右或上下区域按阅读方向翻页，也可滑动翻页。中间双击打开作品详情，长按隐藏或显示阅读控件；双击两侧图片缩放，动图按一页自动播放。")
                     .font(.caption).foregroundStyle(.secondary) }
             }
             .listSectionSpacing(16)
@@ -791,6 +799,18 @@ struct ReaderView: View {
             .toolbar { AppToolbarItem(placement: .confirmationAction, tone: .accent) { Button("完成") { settings = false } } }
         }
         .presentationDetents([.medium, .large])
+        .statusBarHidden(false)
+    }
+    private func bindFavoriteState() {
+        favoriteObservation.bind(favoriteClient(for: gallery, session: session), reference: gallery.ref,
+                                 cache: session.favoriteStateCache, scope: GalleryFavoriteScope(gallery, session))
+    }
+    private var favoriteAccessibilityValue: String {
+        let value = favoriteStateDescription(favoriteObservation.state)
+        if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-favorite-counters") {
+            return value + ";" + NativeFavoritesQA.counts(reference: gallery.ref)
+        }
+        return value
     }
 
     private var closeButton: some View {
@@ -808,12 +828,53 @@ struct ReaderView: View {
         .accessibilityIdentifier("reader.close")
     }
 
+    private var readerHeader: some View {
+        HStack(spacing: 8) {
+            closeButton
+            Text(gallery.title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 44)
+        .padding(.horizontal, 12)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("reader.header")
+    }
+
     private func canvasTapped(_ point: CGPoint) {
         guard !pageZoomed, !singleDragActive, Date() >= ignoreCanvasTapUntil,
               let context = readingContext, isCurrent(context), viewportFrame.width > 0 else { return }
-        let x = (point.x - viewportFrame.minX) / viewportFrame.width
-        let y = (point.y - viewportFrame.minY) / viewportFrame.height
-        if (0.28...0.72).contains(x) && (0.24...0.76).contains(y) { settings = true }
+        switch ReaderTapPolicy.action(at: point, in: viewportFrame, direction: direction,
+                                      mode: ReaderMode(rawValue: mode) ?? .continuous) {
+        case .previous: changePage(by: -1)
+        case .next: changePage(by: 1)
+        case .center: break
+        case nil: break
+        }
+    }
+
+    private var canvasInteractions: CanvasInteractions {
+        .init(singleTap: canvasTapped, doubleTap: canvasDoubleTapped, longPress: toggleImmersive)
+    }
+
+    private func canvasDoubleTapped(_ point: CGPoint) -> Bool {
+        guard !singleDragActive, !settings, !detailsShowing, Date() >= ignoreCanvasTapUntil,
+              let context = readingContext, isCurrent(context),
+              ReaderTapPolicy.action(at: point, in: viewportFrame, direction: direction,
+                                     mode: ReaderMode(rawValue: mode) ?? .continuous) == .center else { return false }
+        detailsShowing = true
+        return true
+    }
+
+    private func toggleImmersive() {
+        guard !singleDragActive, !settings, !detailsShowing,
+              let context = readingContext, isCurrent(context) else { return }
+        progressHUD = false; stopTrackingScroll(); cancelPageAnimation()
+        immersive.toggle()
+        ignoreCanvasTapUntil = Date().addingTimeInterval(0.25)
     }
 
     private func updateViewportFrame(_ frame: CGRect) {
@@ -993,6 +1054,27 @@ struct ReaderView: View {
     }
 }
 
+/// XCTest's app hierarchy omits the system status bar on current iOS.
+/// Read its actual scene state rather than treating that omission as hidden.
+private struct ReaderSystemChromeProbe: UIViewRepresentable {
+    final class Probe: UIView {
+        override var accessibilityValue: String? {
+            get {
+                guard let manager = window?.windowScene?.statusBarManager else { return "unavailable" }
+                return "hidden=\(manager.isStatusBarHidden);height=\(manager.statusBarFrame.height)"
+            }
+            set { }
+        }
+    }
+    func makeUIView(context: Context) -> Probe {
+        let view = Probe()
+        view.isAccessibilityElement = true
+        view.accessibilityIdentifier = "reader.system.chrome.qa"
+        return view
+    }
+    func updateUIView(_ view: Probe, context: Context) { }
+}
+
 struct ReaderPage: View {
     var page: GalleryPage
     var active: Bool
@@ -1002,7 +1084,7 @@ struct ReaderPage: View {
     var progress: MediaLoadProgress? = nil
     var animated: Bool
     var retry: () -> Void
-    var onSingleTap: ((CGPoint) -> Void)? = nil
+    var interactions = CanvasInteractions()
     var onZoomChanged: ((Bool) -> Void)? = nil
     var onImageSizeChanged: ((CGSize) -> Void)? = nil
     var onPresentation: ((ImageCanvasPresentation) -> Void)? = nil
@@ -1011,22 +1093,21 @@ struct ReaderPage: View {
             Color.black
             if active, let file {
                 MediaCanvas(file: file, animated: animated, onZoomChanged: onZoomChanged,
-                            onImageSizeChanged: onImageSizeChanged, onSingleTap: onSingleTap, onPresentation: onPresentation)
+                            onImageSizeChanged: onImageSizeChanged, interactions: interactions, onPresentation: onPresentation)
             } else if active, let failure {
-                ReaderLoadingPage(index: page.index, failure: ErrorMessages.message(failure), retry: retry)
-            } else if active { ReaderLoadingPage(index: page.index, progress: progress) }
+                ReaderLoadingPage(index: page.index, failure: ErrorMessages.message(failure), retry: retry, interactions: interactions)
+            } else if active { ReaderLoadingPage(index: page.index, progress: progress, interactions: interactions) }
             else { Text("第 \(page.index) 页").font(.caption).foregroundStyle(.white.opacity(0.4)) }
         }
         .onChange(of: active) { _, value in if !value { onZoomChanged?(false) } }
         .onChange(of: file) { _, _ in onZoomChanged?(false) }
-        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { value in
-            if active, file == nil, failure == nil { onSingleTap?(value.location) }
-        })
     }
 }
 
 struct GalleryDetailView: View {
     var gallery: Gallery
+    var onResumeReading: (() -> Void)? = nil
+    var allowsTagSearch = true
     var onSearchTag: (GalleryTag, GallerySite) -> Void
     @EnvironmentObject private var session: SiteSession
     @EnvironmentObject private var library: LibraryStore
@@ -1038,6 +1119,9 @@ struct GalleryDetailView: View {
     @State private var reader = false
     @State private var web: WebDestination?
     @State private var lastBlocked: GalleryTag?
+    @State private var favoriteEditing = false
+    @State private var favoriteRemoval = false
+    @StateObject private var favoriteObservation = GalleryFavoriteObservation()
     private var current: Gallery {
         guard var resolved = detail?.gallery else { return gallery }
         if resolved.cover == nil { resolved.cover = gallery.cover }
@@ -1049,12 +1133,13 @@ struct GalleryDetailView: View {
         if resolved.tags.isEmpty { resolved.tags = gallery.tags; resolved.tagsComplete = gallery.tagsComplete }
         return resolved
     }
-    private var favoriteStatus: String {
-        if loading { return "读取中…" }
-        if failure != nil { return "读取失败" }
-        guard let detail else { return "尚未读取" }
-        if let name = detail.favoriteName { return "已收藏 · \(name)" }
-        return "未收藏"
+    private var favoriteState: GalleryFavoriteState { favoriteObservation.state }
+    private var favoriteTitle: String {
+        switch favoriteState {
+        case .unknown: return "站点收藏"
+        case .notFavorited: return "收藏到站点"
+        case .favorited: return "已收藏"
+        }
     }
     var body: some View {
         ScrollView {
@@ -1076,31 +1161,59 @@ struct GalleryDetailView: View {
                         if !current.uploader.isEmpty { Text("上传者 · \(current.uploader)").font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     }
                 }
-                HStack(spacing: 10) {
-                    Button { reader = true } label: { Label(library.snapshot.history.contains(where: { $0.id == gallery.id }) ? "继续阅读" : "在线阅读", systemImage: "book").frame(maxWidth: .infinity, minHeight: 28) }.buttonStyle(AppActionButtonStyle(tone: .accent)).controlSize(.regular).disabled(detail == nil && !AppMode.qa)
-                    Button { library.bookmark(current) } label: { Image(systemName: library.snapshot.bookmarks.contains(where: { $0.id == gallery.id }) ? "bookmark.fill" : "bookmark").font(.body).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityLabel("本机书签")
-                    Button { downloads.enqueue(current) } label: { Image(systemName: "arrow.down").font(.body).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityLabel("下载当前画质").disabled(detail == nil || AppMode.qa)
+                VStack(alignment: .leading, spacing: 4) {
+                  HStack(spacing: 10) {
+                    let readingTitle = onResumeReading != nil ? "返回阅读" : (library.snapshot.history.contains(where: { $0.id == gallery.id }) ? "继续阅读" : "在线阅读")
+                    Button { if let onResumeReading { onResumeReading() } else { reader = true } } label: { actionLabel(readingTitle, symbol: "book") }
+                        .buttonStyle(AppActionButtonStyle(tone: .accent)).controlSize(.regular)
+                        .accessibilityLabel(readingTitle).disabled(onResumeReading == nil && detail == nil && !AppMode.qa)
+                    Button { favoriteRemoval = false; favoriteEditing = true } label: {
+                        actionLabel(favoriteTitle, symbol: { if case .favorited = favoriteState { return "star.fill" }; return "star" }())
+                    }.buttonStyle(AppActionButtonStyle()).accessibilityIdentifier("detail.site-favorite")
+                        .accessibilityLabel(favoriteAccessibilityLabel)
+                    Menu {
+                        Button { library.toggleReadLater(current) } label: {
+                            Label(library.containsReadLater(current) ? "移出稍后再读" : "加入稍后再读", systemImage: "text.badge.plus")
+                        }.accessibilityIdentifier("detail.local-bookmark")
+                        if case .favorited = favoriteState {
+                            Button("取消站点收藏", role: .destructive) { favoriteRemoval = true; favoriteEditing = true }
+                                .accessibilityIdentifier("detail.remove-site-favorite")
+                        }
+                        Button { downloads.enqueue(current) } label: { Label("下载当前画质", systemImage: "arrow.down") }
+                            .disabled(detail == nil || AppMode.qa)
+                    } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44).contentShape(Rectangle()) }
+                        .buttonStyle(.plain).accessibilityLabel("更多操作").accessibilityIdentifier("detail.more")
+                  }
+                  if case let .favorited(group) = favoriteState {
+                    HStack(spacing: 8) {
+                      Text("收藏分组 · \(group)").font(.caption).foregroundStyle(.secondary)
+                          .lineLimit(1).truncationMode(.tail).accessibilityIdentifier("detail.favorite-group")
+                      Spacer(minLength: 4)
+                      Button("取消收藏") { favoriteRemoval = true; favoriteEditing = true }
+                          .font(.caption).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                          .frame(minHeight: 44).accessibilityIdentifier("detail.cancel-favorite")
+                    }
+                  } else if case .unknown = favoriteState {
+                      Text("收藏状态待核实").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                  }
                 }.accessibilityElement(children: .contain).accessibilityIdentifier("detail.actions")
                 if loading { ProgressView() }
                 if let failure { StatusMessage(title: failure) { Task { await load() } } }
                 Divider()
-                HStack {
-                    Text("站点收藏")
-                    Spacer()
-                    Text(favoriteStatus).font(.caption).foregroundStyle(.secondary)
-                    Button("管理") { var components = URLComponents(url: current.ref.site.baseURL.appendingPathComponent("gallerypopups.php"), resolvingAgainstBaseURL: false)!; components.queryItems = [.init(name: "gid", value: String(current.ref.gid)), .init(name: "t", value: current.ref.token), .init(name: "act", value: "addfav")]; web = .init(title: "管理站点收藏", url: components.url!) }.disabled(AppMode.qa)
-                }.font(.subheadline)
                 if let lastBlocked { HStack { Text("已屏蔽 \(lastBlocked.name)").font(.caption); Spacer(); Button("撤销") { library.unblock(lastBlocked); self.lastBlocked = nil } }.font(.caption) }
                 if !current.tags.isEmpty {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("标签").font(.headline)
-                        Text("点按用于组合搜索，长按加入常用或屏蔽。").font(.caption).foregroundStyle(.secondary)
+                        if allowsTagSearch {
+                            Text("点按作者查看该作者作品，其他标签加入当前搜索；长按可加入常用或屏蔽。").font(.caption).foregroundStyle(.secondary)
+                        }
                         ForEach(Array(Set(current.tags.map(\.namespace))).sorted(), id: \.self) { namespace in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(namespace.uppercased()).font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
                                 TagWrapLayout(spacing: 7) {
                                     ForEach(current.tags.filter { $0.namespace == namespace }) { tag in
                                         Button { onSearchTag(tag, current.ref.site) } label: { Text(tag.name).font(.subheadline).padding(.horizontal, 11).padding(.vertical, 8).background(Color(uiColor: .secondarySystemFill), in: Capsule()) }
+                                            .disabled(!allowsTagSearch)
                                             .contextMenu { Button("加入常用标签") { library.pin(tag) }; Button("屏蔽标签") { library.block(tag); lastBlocked = tag }; if library.blockedIDs.contains(tag.id) { Button("解除屏蔽") { library.unblock(tag) } } }
                                     }
                                 }
@@ -1123,9 +1236,32 @@ struct GalleryDetailView: View {
             }.padding(22)
         }.navigationTitle("画廊详情").navigationBarTitleDisplayMode(.inline).appNavigationChrome(backButton: true)
             .task { await load() }
+            .onDisappear { favoriteObservation.cancel() }
+            .onAppear(perform: bindFavoriteState)
+            .onChange(of: GalleryFavoriteScope(gallery, session)) { _, _ in bindFavoriteState() }
+            .onReceive(session.favoriteStateCache.$revision) { _ in favoriteObservation.syncFromCache() }
             .accessibilityHidden(reader)
-            .fullScreenCover(isPresented: $reader) { ReaderView(gallery: current) }
+            .fullScreenCover(isPresented: $reader) {
+                ReaderView(gallery: current, onSearchTag: { tag, site in reader = false; onSearchTag(tag, site) })
+            }
             .sheet(item: $web, onDismiss: { Task { await load() } }) { OfficialWebView(destination: $0) }
+            .sheet(isPresented: $favoriteEditing) {
+                GalleryFavoriteEditorView(gallery: current, session: session, requestRemoval: favoriteRemoval, preparation: favoriteObservation.preparation(favoriteClient(for: current, session: session), reference: current.ref)) { favoriteObservation.accept($0, form: $1) }
+            }
+    }
+    private var favoriteAccessibilityLabel: String {
+        if case let .favorited(group) = favoriteState { return "\(favoriteTitle)，\(group)" }
+        return favoriteTitle
+    }
+    private func bindFavoriteState() {
+        favoriteObservation.bind(favoriteClient(for: gallery, session: session), reference: gallery.ref,
+                                 cache: session.favoriteStateCache, scope: GalleryFavoriteScope(gallery, session))
+    }
+    private func actionLabel(_ title: String, symbol: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            Label(title, systemImage: symbol).fixedSize(horizontal: true, vertical: false)
+            Image(systemName: symbol).font(.system(size: 17, weight: .medium)).frame(height: 28)
+        }.frame(maxWidth: .infinity, minHeight: 28)
     }
     private func detailLink(title: String, subtitle: String, icon: String, identifier: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -1141,10 +1277,27 @@ struct GalleryDetailView: View {
         }.buttonStyle(.plain).disabled(AppMode.qa).accessibilityIdentifier(identifier)
     }
     private func load() async {
-        if AppMode.qa { detail = QASamples.detail(gallery); return }
+        let scope = GalleryFavoriteScope(gallery, session)
+        let favoriteVersion = session.favoriteStateCache.entry(scope)?.version
+        if AppMode.qa {
+            detail = QASamples.detail(gallery)
+            session.favoriteStateCache.put(NativeFavoritesQA.detailState(reference: gallery.ref), scope: scope,
+                                           expectedVersion: favoriteVersion, conditional: true)
+            return
+        }
         let revision = session.generation
         loading = true; defer { loading = false }
-        do { let value = try EHParser.detail(await session.html(gallery.ref.url), reference: gallery.ref); guard revision == session.generation else { return }; detail = value; failure = nil }
+        do {
+            let value = try EHParser.detail(await session.html(gallery.ref.url), reference: gallery.ref)
+            guard revision == session.generation else { return }
+            detail = value; failure = nil
+            if value.favoriteStateKnown {
+                // This field was already returned with the gallery details.
+                // Reuse it without issuing any favorite-form request.
+                session.favoriteStateCache.put(value.favoriteState, scope: scope,
+                                               expectedVersion: favoriteVersion, conditional: true)
+            }
+        }
         catch { guard revision == session.generation else { return }; failure = ErrorMessages.message(error, fallback: ViewerError.network.localizedDescription) }
     }
 }

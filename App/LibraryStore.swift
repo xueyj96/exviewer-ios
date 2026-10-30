@@ -22,6 +22,12 @@ struct LibrarySnapshot: Codable {
     var favoriteTags: [GalleryTag] = []
     var blockedTags: [GalleryTag] = []
     var bookmarks: [Gallery] = []
+    // Keep the v1 storage key and original order. Reinterpreting old bookmarks
+    // as read-later intent needs no duplicate import or invented timestamp.
+    var readLater: [Gallery] {
+        get { bookmarks }
+        set { bookmarks = newValue }
+    }
     var history: [ReadingRecord] = []
     var downloads: [DownloadRecord] = []
 }
@@ -47,6 +53,8 @@ private struct RecentSearchFile: Codable {
 }
 
 @MainActor final class LibraryStore: ObservableObject {
+    struct ReadLaterNotice: Identifiable { let id = UUID(); let text: String }
+    @Published private(set) var readLaterNotice: ReadLaterNotice?
     @Published private(set) var snapshot = LibrarySnapshot()
     @Published private(set) var recentSearches: [RecentSearchRecord] = []
     @Published private(set) var searchHistoryError: String?
@@ -65,7 +73,7 @@ private struct RecentSearchFile: Codable {
     }
     func load(owner: String) {
         guard owner == "guest" || owner.allSatisfy({ $0.isHexDigit }) else { return }
-        self.owner = owner; snapshot = LibrarySnapshot(); error = nil
+        self.owner = owner; snapshot = LibrarySnapshot(); error = nil; readLaterNotice = nil
         recentSearches = []; searchHistoryError = nil
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
@@ -97,6 +105,9 @@ private struct RecentSearchFile: Codable {
             var qaSnapshot = snapshot
             qaSnapshot.blockedTags = LibrarySelectionQA.blockedTags
             snapshot = qaSnapshot
+        }
+        if ephemeral && ProcessInfo.processInfo.arguments.contains("--qa-library-sort") {
+            snapshot = QASamples.sortingLibrary
         }
     }
 
@@ -174,7 +185,27 @@ private struct RecentSearchFile: Codable {
     func unpin(_ tag: GalleryTag) { commit { $0.favoriteTags.removeAll { $0.id == tag.id } } }
     func block(_ tag: GalleryTag) { commit { value in if !value.blockedTags.contains(where: { $0.id == tag.id }) { value.blockedTags.append(tag) } } }
     func unblock(_ tag: GalleryTag) { commit { $0.blockedTags.removeAll { $0.id == tag.id } } }
-    func bookmark(_ gallery: Gallery) { commit { value in if let index = value.bookmarks.firstIndex(where: { $0.id == gallery.id }) { value.bookmarks.remove(at: index) } else { value.bookmarks.insert(gallery.stored, at: 0) } } }
+    func containsReadLater(_ gallery: Gallery) -> Bool { snapshot.readLater.contains { $0.id == gallery.id } }
+    @discardableResult func toggleReadLater(_ gallery: Gallery) -> Bool {
+        setReadLater(gallery, included: !containsReadLater(gallery))
+    }
+    @discardableResult func setReadLater(_ gallery: Gallery, included: Bool) -> Bool {
+        let saved = commit { value in
+            if included {
+                if !value.readLater.contains(where: { $0.id == gallery.id }) { value.readLater.insert(gallery.stored, at: 0) }
+            } else { value.readLater.removeAll { $0.id == gallery.id } }
+        }
+        readLaterNotice = .init(text: saved ? (included ? "已加入稍后再读" : "已移出稍后再读") : "稍后再读未能保存，请重试")
+        return saved
+    }
+    @discardableResult func removeReadLater(_ ids: Set<String>) -> Bool {
+        let saved = commit { $0.readLater.removeAll { ids.contains($0.id) } }
+        readLaterNotice = .init(text: saved ? "所选作品已移出稍后再读" : "稍后再读未能保存，请重试")
+        return saved
+    }
+    func dismissReadLaterNotice(_ id: UUID) { if readLaterNotice?.id == id { readLaterNotice = nil } }
+    // Compatibility for older callers and saved QA fixtures; one collection.
+    func bookmark(_ gallery: Gallery) { toggleReadLater(gallery) }
     func remember(_ gallery: Gallery, page: Int) {
         guard page > 0 else { return }
         commit { value in value.history.removeAll { $0.id == gallery.id }; value.history.insert(.init(gallery: gallery.stored, page: page, date: Date()), at: 0); value.history = Array(value.history.prefix(500)) }

@@ -117,7 +117,7 @@ public enum EHParser {
             if let raw = match(try node.attr("onclick"), #"popUp\('([^']+)'"#), let candidate = url(raw, base: reference.url), URLPolicy.account(candidate) { archive = candidate }
         }
         let favoriteName = text(doc, "#fav").trimmingCharacters(in: .whitespacesAndNewlines)
-        return GalleryDetail(gallery: gallery, pages: pages.sorted { $0.index < $1.index }, next: try next(doc, base: base, gallery: true), archive: archive, favoriteName: favoriteName.isEmpty || favoriteName == "Add to Favorites" ? nil : favoriteName)
+        return GalleryDetail(gallery: gallery, pages: pages.sorted { $0.index < $1.index }, next: try next(doc, base: base, gallery: true), archive: archive, favoriteName: favoriteName.isEmpty || favoriteName == "Add to Favorites" ? nil : favoriteName, favoriteStateKnown: !favoriteName.isEmpty)
     }
     public static func image(_ html: String, base: URL) throws -> ImageSource {
         try check(html)

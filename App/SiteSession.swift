@@ -54,7 +54,7 @@ enum SessionVault {
 final class SafeRedirect: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         guard let url = request.url, URLPolicy.account(url) || URLPolicy.media(url) else { completionHandler(nil); return }
-        if task.originalRequest?.httpMethod == "POST", task.originalRequest?.url?.path == "/favorites.php",
+        if task.originalRequest?.httpMethod == "POST", ["/favorites.php", "/gallerypopups.php"].contains(task.originalRequest?.url?.path ?? ""),
            task.originalRequest?.url?.host != url.host { completionHandler(nil); return }
         var safe = request
         // A redirect never carries a manually constructed authentication header to another origin.
@@ -68,6 +68,8 @@ final class SafeRedirect: NSObject, URLSessionTaskDelegate, @unchecked Sendable 
     @Published private(set) var exStatus = "未验证"
     @Published private(set) var generation = UUID()
     @Published private(set) var owner = "guest"
+    @Published private(set) var favoritesRevision = UUID()
+    let favoriteStateCache = SiteFavoriteCache()
     @Published var quota = AccountQuota()
     @Published var error: String?
     let webStore = WKWebsiteDataStore.nonPersistent()
@@ -194,7 +196,7 @@ final class SafeRedirect: NSObject, URLSessionTaskDelegate, @unchecked Sendable 
         try Task.checkCancellation()
         guard revision == generation else { throw ViewerError.stale }
         var request = URLRequest(url: url); request.httpMethod = method; request.httpBody = body
-        if method == "POST", url.path == "/favorites.php", let host = url.host, GallerySite.allCases.contains(where: { $0.host == host }) {
+        if method == "POST", ["/favorites.php", "/gallerypopups.php"].contains(url.path), let host = url.host, GallerySite.allCases.contains(where: { $0.host == host }) {
             request.setValue("https://" + host, forHTTPHeaderField: "Origin")
             request.setValue(url.absoluteString, forHTTPHeaderField: "Referer")
         }
@@ -275,6 +277,7 @@ final class SafeRedirect: NSObject, URLSessionTaskDelegate, @unchecked Sendable 
             throw FavoriteMutationFailure(requestMayHaveBeenSent: failure.requestMayHaveBeenSent, underlying: failure.underlying)
         }
     }
+    func favoriteChanged() { favoritesRevision = UUID() }
     func refreshQuota() async {
         let revision = generation
         do {

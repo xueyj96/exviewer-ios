@@ -72,8 +72,10 @@ final class ExViewerUITests: XCTestCase {
     }
 
     func testSaveAndReuseSearchCombination() {
+        continueAfterFailure = false
         let app = launch()
         let input = openComposer(app); input.tap(); input.typeText("Landscape -other:watercolor")
+        app.buttons["compose.filters"].tap()
         let artist = app.textFields["compose.artist"]; artist.tap(); artist.typeText("Mori")
         let titleScope = app.switches["关键词只匹配标题"]
         titleScope.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
@@ -82,23 +84,33 @@ final class ExViewerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["排除 · other:watercolor  ×"].waitForExistence(timeout: 6))
         app.buttons["discover.save"].tap()
         let name = app.textFields["search.save.name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText("Weekly art")
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        if let old = name.value as? String, old != name.placeholderValue { name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count)) }
+        name.typeText("Weekly art")
         app.buttons["search.save.confirm"].tap()
-        let shortcut = app.buttons["载入并执行组合：Weekly art"]
+        let shortcut = app.buttons["载入组合编辑：Weekly art"]
         XCTAssertTrue(shortcut.waitForExistence(timeout: 5))
         submit(app, text: "Other")
         shortcut.tap()
-        let restored = openComposer(app)
+        let restored = field(app, "compose.text")
+        XCTAssertTrue(restored.waitForExistence(timeout: 5))
         XCTAssertEqual(restored.value as? String, "Landscape")
+        app.buttons["compose.filters"].tap()
         XCTAssertEqual(app.textFields["compose.artist"].value as? String, "Mori")
         XCTAssertEqual(app.switches["关键词只匹配标题"].value as? String, "1")
+        app.buttons["BackButton"].tap()
         restored.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         restored.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "Landscape".count))
         restored.typeText("Landscape edited")
+        app.buttons["compose.save-favorite"].tap()
+        XCTAssertTrue(app.navigationBars["编辑搜索组合"].waitForExistence(timeout: 5))
+        app.buttons["search.save.confirm"].tap()
+        XCTAssertEqual(app.descendants(matching: .any)["compose.loaded-state"].firstMatch.value as? String, "已保存")
         app.buttons["compose.apply"].tap()
-        app.buttons["discover.save"].tap(); app.buttons["search.save.confirm"].tap()
         shortcut.tap()
-        let updated = openComposer(app)
+        let updated = field(app, "compose.text")
+        XCTAssertTrue(updated.waitForExistence(timeout: 5))
         XCTAssertEqual(updated.value as? String, "Landscape edited")
         app.buttons["compose.cancel"].tap()
         capture(app, "Saved combination restores structured fields and updates explicitly")
@@ -113,7 +125,7 @@ final class ExViewerUITests: XCTestCase {
         app.buttons["关闭"].tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["main.tab.library"].tap()
-        app.segmentedControls["library.scope"].buttons["本机资料"].tap()
+        app.segmentedControls["library.scope"].buttons["本机内容"].tap()
         XCTAssertTrue(app.staticTexts["海岸线 · 插画与速写"].waitForExistence(timeout: 5))
         app.buttons["main.tab.account"].tap()
         let tagSettings = app.buttons["account.tags"]
@@ -132,7 +144,7 @@ final class ExViewerUITests: XCTestCase {
         let hidden = app.staticTexts["当前结果已被本机标签屏蔽。可到账号的「标签与屏蔽」调整。"]
         XCTAssertTrue(hidden.waitForExistence(timeout: 5))
         app.buttons["main.tab.library"].tap()
-        app.segmentedControls["library.scope"].buttons["本机资料"].tap()
+        app.segmentedControls["library.scope"].buttons["本机内容"].tap()
         XCTAssertFalse(app.staticTexts["海岸线 · 插画与速写"].exists)
         app.buttons["main.tab.account"].tap()
         app.buttons["撤销"].tap()
@@ -156,7 +168,7 @@ final class ExViewerUITests: XCTestCase {
         app.buttons["main.tab.library"].tap()
         XCTAssertTrue(app.segmentedControls["library.scope"].buttons["站点收藏"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["海岸线 · 插画与速写"].exists)
-        app.segmentedControls["library.scope"].buttons["本机资料"].tap()
+        app.segmentedControls["library.scope"].buttons["本机内容"].tap()
         XCTAssertTrue(app.staticTexts["按设备可用空间保存，切到后台会暂停；下载内容不参与浏览缓存清理。"].waitForExistence(timeout: 5))
         capture(app, "Durable manual downloads outside browse cache")
     }
@@ -184,23 +196,29 @@ final class ExViewerUITests: XCTestCase {
         capture(app, "Favorites selection and explicit batch confirmation")
     }
     func testFeedLoadsNextBatchWhenScrollingDown() {
+        continueAfterFailure = false
         let app = XCUIApplication(); app.launchArguments = ["--qa", "--qa-feed-paging", "--qa-reset-reader-preferences"]; app.launch()
         XCTAssertTrue(app.buttons["discover.search-entry"].waitForExistence(timeout: 12))
-        let next = app.staticTexts["第二批 · 山间笔记"]
-        func continueByScrolling() {
+        // Different feeds intentionally reuse the same fixture title. Bind to
+        // each active feed's gallery control instead of a cached hidden label.
+        func continueByScrolling(_ next: XCUIElement) {
             XCTAssertFalse(next.exists, "The app must not traverse unseen pages before scrolling")
             for _ in 0..<6 { if next.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(next.waitForExistence(timeout: 5))
             XCTAssertTrue(next.isHittable)
         }
-        continueByScrolling()
+        continueByScrolling(app.scrollViews["discover.feed"].buttons["gallery.open.101"])
         capture(app, "Discovery appends after actual downward browsing")
         submit(app, text: "Neutral query")
-        continueByScrolling()
+        XCTAssertTrue(app.staticTexts["已执行：EX · Neutral query"].waitForExistence(timeout: 5))
+        let firstSearchResult = app.scrollViews["discover.feed"].buttons["gallery.open.1"]
+        expectation(for: NSPredicate { _, _ in firstSearchResult.isHittable }, evaluatedWith: nil)
+        waitForExpectations(timeout: 5)
+        continueByScrolling(app.scrollViews["discover.feed"].buttons["gallery.open.101"])
         capture(app, "Search results append in the same feed")
         app.buttons["main.tab.library"].tap()
         XCTAssertTrue(app.buttons["favorites.gallery.1"].waitForExistence(timeout: 10))
-        continueByScrolling()
+        continueByScrolling(app.buttons["favorites.gallery.101"])
         capture(app, "Favorites append after actual downward browsing")
     }
     func testInlineTagsBecomeSearchConditions() {
@@ -292,11 +310,12 @@ final class ExViewerUITests: XCTestCase {
         let app = launch()
         let title = app.staticTexts["海岸线 · 插画与速写"]
         XCTAssertTrue(title.waitForExistence(timeout: 12)); title.tap()
-        let read = app.buttons["在线阅读"], bookmark = app.buttons["本机书签"], download = app.buttons["下载当前画质"]
+        let read = app.buttons["在线阅读"], favorite = app.buttons["detail.site-favorite"], more = app.buttons["detail.more"]
         XCTAssertTrue(read.waitForExistence(timeout: 8))
-        XCTAssertLessThan(abs(read.frame.midY - bookmark.frame.midY), 6)
-        XCTAssertLessThan(abs(read.frame.midY - download.frame.midY), 6)
-        XCTAssertGreaterThanOrEqual(bookmark.frame.height, 44)
+        XCTAssertLessThan(abs(read.frame.midY - favorite.frame.midY), 6)
+        XCTAssertLessThan(abs(read.frame.midY - more.frame.midY), 6)
+        XCTAssertGreaterThanOrEqual(favorite.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(more.frame.height, 44)
         XCTAssertTrue(app.staticTexts["作者 · preview studio"].exists)
         XCTAssertTrue(app.staticTexts["上传者 · Preview Studio"].exists)
         capture(app, "Compact detail actions and readable gallery metadata")

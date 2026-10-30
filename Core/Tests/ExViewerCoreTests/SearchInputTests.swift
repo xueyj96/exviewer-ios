@@ -55,7 +55,7 @@ final class SearchInputTests: XCTestCase {
         XCTAssertEqual(try parsed.query.expression(), #"~other:"full color"$"#)
     }
 
-    func testPreservesExistingFilterFieldsAndReplacesDuplicateTag() throws {
+    func testPreservesOtherFilterFieldsAndReplacesExplicitArtistAndDuplicateTag() throws {
         var base = SearchQuery()
         base.artist = "Mori"
         base.uploader = "archive"
@@ -71,7 +71,7 @@ final class SearchInputTests: XCTestCase {
 
         let parsed = try SearchInputParser.parse("-other:city artist:sample", preserving: base)
 
-        XCTAssertEqual(parsed.query.artist, "Mori")
+        XCTAssertEqual(parsed.query.artist, "")
         XCTAssertEqual(parsed.query.uploader, "archive")
         XCTAssertEqual(parsed.query.excludedCategories, [1, 32])
         XCTAssertEqual(parsed.query.minRating, 4)

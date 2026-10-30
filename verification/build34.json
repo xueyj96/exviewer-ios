@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T14:18:17.205644+00:00",
+  "version": "0.1.0",
+  "build": "34",
+  "stage": "LOCAL_READER_IMMERSION_AND_GESTURES_RELEASE_AND_TARGETED_CHECKS_VERIFIED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "5d518ccb3ef8da4f40243f67d1d9504f87975a730d96b73069640784c92bec21",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build33": [
+    "App/MediaCanvas.swift",
+    "App/ReaderLoadingPage.swift",
+    "App/ReaderPaging.swift",
+    "App/ReaderView.swift"
+  ],
+  "implemented": [
+    "Reader edge arrow buttons removed;direction-aware tap anddrag retained withaccessibility page actions",
+    "Center single tap isidle;center double tap presents native current-gallery details andreturns tosame reader/page",
+    "Long press toggles header,bottom controls,status bar andsystem overlays;repeat restores them without changing page",
+    "Loaded media andloading/metadata placeholders share interaction callbacks andgesture precedence",
+    "Edge double tap retains zoom;stale queued callbacks arediscarded aftercanvas invalidation",
+    "Reading settings remain onbottom controls;details resume action isindependent ofnetwork load"
+  ],
+  "network_loading_storage_policy_changed": false,
+  "tests": {
+    "counting": "Unique targeted cases at latest applicable result across two test runs;not a single19-case green suite",
+    "native_unique_latest_passed": 16,
+    "UI_unique_latest_passed": 3,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.CanvasInteractionTests testDoubleTapCanBeConsumedOrFallThroughToZoomUsingLatestHandler": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.CanvasInteractionTests testQueuedTapAndLongPressAreDiscardedAfterCanvasInvalidation": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.CanvasInteractionTests testValidLongPressReportsOnlyLongPressAndEmptyHandlersStayInactive": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testCommittedNeighborAndPreviousCanvasKeepTheirPhysicalPositionsAtHandoff": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testContinuousModeRetainsItsCenterTapAndDoesNotGainPageTapZones": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testFastScrollTargetsItsProjectedPageWithoutLimitingToAdjacentPage": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testInteractiveDragMapsAllDirectionsAndKeepsShortDragsCancelled": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testInvalidAndOutsideTapCoordinatesDoNotPerformActions": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testLongPageInteriorIsFreeAndItsEndCanSnap": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testMiddleStripAndItsBoundariesIdentifyCenterInEveryDirection": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testNeighborReboundKeepsItsSideAtZeroInEveryDirection": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testReverseMiddleShortPageDoesNotCollapseOntoContentStart": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testShortHorizontalPageMatchesCenteredScrollPosition": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testSlideTravelsAlongAllFourDirectionsAndReversesForBack": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testTapZonesFollowBothAxesAndReverseReadingOrder": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testZoomAndUnknownDistantFramesCannotForceASnap": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.ReaderImmersionV34UITests testContinuousReaderCanHideAndRestoreChromeWithoutChangingItsPage": {
+        "result": "passed",
+        "duration_seconds": 28.376,
+        "raw_log": "QA/Simulator-20261029T141147Z-test.log",
+        "xcresult": "QA/Simulator-20261029T141147Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderImmersionV34UITests testLoadedImageDoubleTapDetailsAndLongPressImmersionPreservePageAndZoom": {
+        "result": "passed",
+        "duration_seconds": 48.774,
+        "raw_log": "QA/Simulator-20261029T141147Z-test.log",
+        "xcresult": "QA/Simulator-20261029T141147Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderImmersionV34UITests testMissingMetadataDoubleTapLongPressAndRetryRemainIndependent": {
+        "result": "passed",
+        "duration_seconds": 41.35,
+        "raw_log": "QA/Simulator-20261029T141147Z-test.log",
+        "xcresult": "QA/Simulator-20261029T141147Z.xcresult",
+        "bundle_finalized": true
+      }
+    },
+    "prior_failed_UI_cases": [
+      {
+        "case": "ExViewerUITests.ReaderImmersionV34UITests testContinuousReaderCanHideAndRestoreChromeWithoutChangingItsPage",
+        "result": "failed",
+        "duration_seconds": 20.338,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.ReaderImmersionV34UITests testLoadedImageDoubleTapDetailsAndLongPressImmersionPreservePageAndZoom",
+        "result": "failed",
+        "duration_seconds": 29.69,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.ReaderImmersionV34UITests testMissingMetadataDoubleTapLongPressAndRetryRemainIndependent",
+        "result": "failed",
+        "duration_seconds": 20.493,
+        "raw_log": "QA/Simulator-20261029T140652Z-test.log",
+        "xcresult": "QA/Simulator-20261029T140652Z.xcresult",
+        "bundle_finalized": false
+      }
+    ],
+    "initial_compile_failure": "QA/Simulator-20261029T140438Z-build.log;UIView.interactions naming conflict fixed by readerInteractions",
+    "statusbar_verification": "Actual windowScene.statusBarManager reports hidden true/height0 and restored false/height54;App-scoped statusBars absence isnot treated as proof",
+    "unit_policy_callback_and_unit_source_unchanged_since_execution": true,
+    "failed_run_evidence": "QA/reader-immersion34/first-ui-diagnostic-stop.json",
+    "completed_green_UI_recheck": "QA/Simulator-20261029T141147Z.xcresult"
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/reader-immersion34/release34-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/reader-immersion34/attachments/94ED33E5-05AE-4C7B-B571-6CA40CBAE1CF.png",
+      "name": "reader34_0_DD45051F-7F5A-471D-9656-5BA9A6AF0392.immersive",
+      "sha256": "c429d2947cb72efd0b3f814aa667b1f88ffa46b4d81e9f1a897b1662a1247dd0",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/reader-immersion34/attachments/CB500E04-A058-4531-B607-1D470E3211A1.png",
+      "name": "reader34_0_83A137E0-10F8-42E6-8930-07B2D7609238.no-arrows",
+      "sha256": "f357039d473582310d75c21c1fd0176e67225e3a74b5cb6702101b809c556d66",
+      "visually_inspected": true
+    }
+  ],
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "pushed_or_published": false
+}

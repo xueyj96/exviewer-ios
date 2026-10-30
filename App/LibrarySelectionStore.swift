@@ -138,6 +138,7 @@ struct FavoritesSelectionCount: View {
     var body: some View {
         Text("已选 \(summary.value.count) 项")
             .monospacedDigit()
+            .lineLimit(1).minimumScaleFactor(0.75)
             .foregroundStyle(.secondary)
             .accessibilityIdentifier("favorites.selection-count")
     }
@@ -160,28 +161,48 @@ struct FavoritesSelectionActions: View {
     }
 
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            actions(compact: false)
+            actions(compact: true)
+        }
+    }
+
+    private func actions(compact: Bool) -> some View {
         HStack {
-            Button(summary.value.allLoadedSelected ? "取消全选" : "全选已加载") {
+            Button {
                 store.toggleAllLoaded()
+            } label: {
+                if compact { Image(systemName: summary.value.allLoadedSelected ? "minus.circle" : "checkmark.circle").font(.system(size: 18)) }
+                else { Text(summary.value.allLoadedSelected ? "取消全选" : "全选已加载") }
             }
-            .buttonStyle(AppActionButtonStyle())
+            .buttonStyle(AppActionButtonStyle(singleLine: true))
+            .accessibilityLabel(summary.value.allLoadedSelected ? "取消全选" : "全选已加载")
             .frame(minHeight: 44)
             .accessibilityIdentifier("favorites.select-all")
 
             Spacer()
 
-            Menu("移到分组") {
+            Menu {
                 ForEach(0...9, id: \.self) { index in
                     Button(categoryName(index)) { onMove(index) }
+                        .accessibilityIdentifier("favorites.move-to.\(index)")
                 }
+            } label: {
+                if compact { Image(systemName: "folder").font(.system(size: 18)) }
+                else { Text("移到分组") }
             }
-            .buttonStyle(AppActionButtonStyle())
+            .buttonStyle(AppActionButtonStyle(singleLine: true))
+            .accessibilityLabel("移到分组")
             .frame(minHeight: 44)
             .disabled(summary.value.count == 0)
             .accessibilityIdentifier("favorites.move")
 
-            Button("移除", role: .destructive, action: onRemove)
-                .buttonStyle(AppActionButtonStyle())
+            Button(role: .destructive, action: onRemove) {
+                if compact { Image(systemName: "trash").font(.system(size: 18)) }
+                else { Text("移除") }
+            }
+                .buttonStyle(AppActionButtonStyle(singleLine: true))
+                .accessibilityLabel("移除")
                 .frame(minHeight: 44)
                 .disabled(summary.value.count == 0)
                 .accessibilityIdentifier("favorites.remove")

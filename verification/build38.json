@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-30T16:36:33.443726+00:00",
+  "version": "0.1.0",
+  "build": "38",
+  "stage": "LOCAL_ON_DEMAND_FAVORITES_RELEASE_VERIFIED_NOT_INSTALLED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "4664c7f906e7fc8ba87d55e58a64de0cac9783c1a77bbdf59b648b1403747e4b",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build37": [
+    "App/GalleryFavoriteEditorModel.swift",
+    "App/GalleryFavoriteEditorView.swift",
+    "App/GalleryFavoriteObservation.swift",
+    "App/NativeFavoritesQA.swift",
+    "App/ReaderView.swift"
+  ],
+  "implemented": [
+    "Reader and detail favorite observers bind synchronously to local state; no network on entry or local state notification",
+    "Expired form cache does not trigger network and does not erase known display state",
+    "Existing gallery detail response favorite field reused with version-conditional publication; no additional favorite-form fetch",
+    "Explicit editor open may reuse a recent form or read it once; manual refresh is explicit; mutation still one POST followed by a fresh GET",
+    "Failed or cancelled initial read does not publish an unknown success or refresh stale form timestamp",
+    "Reading and cached status propagation remain separate from favorite-form network access"
+  ],
+  "tests": {
+    "counting": "20 native and5 UI targeted cases in one completed green run on final source; not a full-suite run",
+    "native_unique_latest_passed": 20,
+    "UI_unique_latest_passed": 5,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.FavoriteObservationTests testAccountSwitchRejectsOldPublicationAndAnotherGalleryCannotUseTheForm": {
+        "result": "passed",
+        "duration_seconds": 0.022,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.FavoriteObservationTests testBindingRepeatedlyAndReceivingLocalChangesNeverReadsTheNetwork": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.FavoriteObservationTests testExpiredFormKeepsKnownDisplayStateWithoutRefreshing": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.FavoriteObservationTests testManualEditorRefreshPreservesDraftAndDoesExactlyOneRead": {
+        "result": "passed",
+        "duration_seconds": 0.009,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.FavoriteObservationTests testOnlyExplicitEditorReadsAndSubmissionStillUsesFreshReadback": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.FavoriteObservationTests testUnknownOutcomeDoesNotStartBackgroundRetryOrClaimSuccess": {
+        "result": "passed",
+        "duration_seconds": 0.005,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testAddMoveAndRemoveRequireFreshStateAndNotifyFavoritesList": {
+        "result": "passed",
+        "duration_seconds": 0.008,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testCancelOnlyLoadsStateAndDoesNotWriteOrInvalidate": {
+        "result": "passed",
+        "duration_seconds": 0.003,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testDoubleSaveAndInvalidNotesDoNotCauseExtraPosts": {
+        "result": "passed",
+        "duration_seconds": 0.025,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testLostPostReplyCanBeConfirmedByReadbackWithoutResubmitting": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testMovingPreservesAnExistingLongNoteWithoutRewritingIt": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testReadableReplyWithoutMatchingStateIsNotSavedAndRetainsEdits": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testStaleContextDoesNotSubmitOrExposeLateState": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteEditorTests testUnknownOutcomeKeepsDraftBlocksPostsAndReadOnlyRefreshCanConfirm": {
+        "result": "passed",
+        "duration_seconds": 0.005,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testLostPopupPostIsNotRetriedByTransport": {
+        "result": "passed",
+        "duration_seconds": 0.049,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupPostHasSameOriginHeadersAndFormEncoding": {
+        "result": "passed",
+        "duration_seconds": 0.002,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.GalleryFavoriteTransportTests testPopupWriteCannotRedirectToAnotherOrigin": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testCacheIsBoundedAndCannotCarryStateOrFormsAcrossAccountsAndSessions": {
+        "result": "passed",
+        "duration_seconds": 0.005,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testOldReadCannotOverwriteNewerLocalConfirmationAndFailureRemainsUnknown": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerTests.SiteFavoriteCacheTests testReaderAndDetailShareConfirmedEditAndDoNotReadAgainOnRevision": {
+        "result": "passed",
+        "duration_seconds": 0.006,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testDetailCancelFavoriteHasExplicitConfirmationAndVerifiedUnfavoritedResult": {
+        "result": "passed",
+        "duration_seconds": 14.358,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testLoadingGroupIsCenteredInPortraitAndLandscapeWithoutChangingFormRowAlignment": {
+        "result": "passed",
+        "duration_seconds": 17.332,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testReaderStarUsesSiteFavoritesWhileReadLaterRemainsIndependent": {
+        "result": "passed",
+        "duration_seconds": 33.086,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerUITests.LibraryFavoritesV37UITests testReadingAndLocalStateBindingDoNotReadFavoriteFormUntilExplicitAction": {
+        "result": "passed",
+        "duration_seconds": 25.503,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testUnknownSubmissionKeepsSelectionAndRefreshOnlyConfirmsIt": {
+        "result": "passed",
+        "duration_seconds": 14.546,
+        "raw_log": "QA/Simulator-20261030T163116Z-test.log",
+        "xcresult": "QA/Simulator-20261030T163116Z.xcresult"
+      }
+    },
+    "completed_green_bundle": "QA/Simulator-20261030T163116Z.xcresult",
+    "prior_required_case_failures": [],
+    "core_package_tests_rerun": false,
+    "unchanged_library_search_and_grid_hashes_verified": true
+  },
+  "request_counter_evidence": {
+    "method": "NativeFavoritesQA logical favorite-form reads/posts, asserted through real reader controls with QA-only accessibility values",
+    "at_reader_entry_and_after_two_page_jumps": {
+      "reads": 0,
+      "posts": 0
+    },
+    "after_explicit_editor_open": {
+      "reads": 1,
+      "posts": 0
+    },
+    "after_continued_reading": {
+      "reads": 1,
+      "posts": 0
+    },
+    "after_manual_refresh": {
+      "reads": 2,
+      "posts": 0
+    },
+    "native_repeated_binding_iterations": 100,
+    "real_network_packet_count_or_phone_timing_measured": false
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/favorite-demand38/release38-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/favorite-demand38/attachments/292EFFD5-1BF9-443E-91FF-3FD631884D92.png",
+      "sha256": "f018c977b25a0fa323b0d67a6f98d93adf60a853744ce9790431813893073b66",
+      "visually_inspected": true
+    }
+  ],
+  "data_schema_or_storage_changed": false,
+  "automatic_background_sync_added": false,
+  "phone_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "installed_or_published": false,
+  "recovery": "Frozen37 preserved; existing v1 library files and signing profile unchanged"
+}

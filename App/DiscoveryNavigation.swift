@@ -23,6 +23,11 @@ import ExViewerCore
     }
 
     func markStarted() { didStart = true }
+
+    func updateVisibleAnchor(_ anchor: String) {
+        guard scrollAnchor != anchor else { return }
+        scrollAnchor = anchor
+    }
 }
 
 /// Keeps one active feed and a bounded in-memory trail of paused feeds.

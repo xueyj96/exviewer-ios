@@ -1,5 +1,27 @@
 import SwiftUI
 
+enum ReaderTapAction: Equatable {
+    case previous, center, next
+}
+
+enum ReaderTapPolicy {
+    static func action(at point: CGPoint, in viewport: CGRect,
+                       direction: ReaderDirection, mode: ReaderMode) -> ReaderTapAction? {
+        guard point.x.isFinite, point.y.isFinite,
+              viewport.width.isFinite, viewport.height.isFinite,
+              viewport.width > 0, viewport.height > 0, viewport.contains(point) else { return nil }
+        let x = (point.x - viewport.minX) / viewport.width
+        let y = (point.y - viewport.minY) / viewport.height
+        guard mode == .singlePage else {
+            return (0.28...0.72).contains(x) && (0.24...0.76).contains(y) ? .center : nil
+        }
+        let position = direction.horizontal ? x : y
+        if (0.30...0.70).contains(position) { return .center }
+        let forward = (position > 0.70) != direction.reverseOrder
+        return forward ? .next : .previous
+    }
+}
+
 enum ReaderSnapPolicy {
     static func offset(proposed: CGFloat, viewport: CGFloat, content: CGFloat,
                        ranges: [CGRect], horizontal: Bool, zoomed: Bool) -> CGFloat? {

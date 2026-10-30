@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T13:16:12.232491+00:00",
+  "version": "0.1.0",
+  "build": "32",
+  "stage": "LOCAL_SINGLE_LINE_DETAIL_ACTION_RELEASE_AND_TARGETED_UI_CHECKS_VERIFIED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "307521efe10d60bd5e8e611f23f2b2166bbcba495c9c156a63fbd292f00be1dd",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "implemented": [
+    "Single-line reading and favorite actions with fitting icon fallback",
+    "Independent one-line favorite group caption with tail truncation",
+    "44pt minimum hit areas and full accessible labels"
+  ],
+  "runtime_delta_from_build31": [
+    "App/NativeFavoritesQA.swift",
+    "App/QASamples.swift",
+    "App/ReaderView.swift"
+  ],
+  "protocol_model_and_storage_unchanged": true,
+  "tests": {
+    "counting": "Four unique targeted UI cases at latest applicable result across two runs;not one four-case green suite",
+    "UI_unique_latest_passed": 4,
+    "layout_profiles": 3,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerUITests.DetailActionLayoutV32UITests testFavoriteActionsStaySingleLineWithSeparateGroupAndLargeType": {
+        "result": "passed",
+        "duration_seconds": 48.587,
+        "raw_log": "QA/Simulator-20261029T130839Z-test.log",
+        "xcresult": "QA/Simulator-20261029T130839Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ExViewerUITests testGalleryDetailUsesOneCompactActionRow": {
+        "result": "passed",
+        "duration_seconds": 18.82,
+        "raw_log": "QA/Simulator-20261029T130437Z-test.log",
+        "xcresult": "QA/Simulator-20261029T130437Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testNativeAddMoveNoteAndConfirmedRemovalUpdateDetailState": {
+        "result": "passed",
+        "duration_seconds": 37.606,
+        "raw_log": "QA/Simulator-20261029T130437Z-test.log",
+        "xcresult": "QA/Simulator-20261029T130437Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.NativeFavoritesV31UITests testUnknownSubmissionKeepsSelectionAndRefreshOnlyConfirmsIt": {
+        "result": "passed",
+        "duration_seconds": 14.33,
+        "raw_log": "QA/Simulator-20261029T130437Z-test.log",
+        "xcresult": "QA/Simulator-20261029T130437Z.xcresult",
+        "bundle_finalized": false
+      }
+    },
+    "prior_failed_cases": [
+      {
+        "case": "ExViewerUITests.DetailActionLayoutV32UITests testFavoriteActionsStaySingleLineWithSeparateGroupAndLargeType",
+        "result": "failed",
+        "duration_seconds": 43.173,
+        "raw_log": "QA/Simulator-20261029T130437Z-test.log",
+        "xcresult": "QA/Simulator-20261029T130437Z.xcresult",
+        "bundle_finalized": false
+      }
+    ],
+    "first_run_diagnostic_stop": "QA/favorite-layout32/first-run-diagnostic-stop.json",
+    "test_precision_diagnosis": "QA/favorite-layout32/frame-precision-diagnosis.json",
+    "completed_green_recheck": "QA/Simulator-20261029T130839Z.xcresult",
+    "core_or_native_unit_tests_rerun_for_layout_only_change": false,
+    "unchanged_protocol_prior_verification": "verification/build31.json"
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/favorite-layout32/release32-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/favorite-layout32/attachments/8DB82930-D8A8-4C35-B437-04F2C83AC283.png",
+      "profile": "dark-large",
+      "sha256": "9e7f53e9496520e4846a9360676728daedebdb5f2c0eb4905984577b9e85357a",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/favorite-layout32/attachments/524B5D72-910C-444A-9D88-8CD152E4B195.png",
+      "profile": "long-group",
+      "sha256": "25b5f5fe50e82838ff956ab50b05b892e53b94b7b2f373a2c2c9334c4acf8a3f",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/favorite-layout32/attachments/8BE98CFC-5A8E-4F4A-A11C-67FEE41AD5D0.png",
+      "profile": "regular",
+      "sha256": "7d75e6bd4146081a347137b9307428f28b400ac733e7061abb699c4fe8bb4615",
+      "visually_inspected": true
+    }
+  ],
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_account_favorite_mutations_attempted": false,
+  "pushed_or_published": false
+}

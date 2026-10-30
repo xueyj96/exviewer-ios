@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T13:49:28.843349+00:00",
+  "version": "0.1.0",
+  "build": "33",
+  "stage": "LOCAL_DIRECTIONAL_TAPS_FLOATING_READER_HEADER_AND_TARGETED_CHECKS_VERIFIED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "f22e226a7178286083a5591a277f4ce3bd7628c72cad2da15509953a61e14dcc",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build32": [
+    "App/ReaderLoadingPage.swift",
+    "App/ReaderPaging.swift",
+    "App/ReaderView.swift"
+  ],
+  "implemented": [
+    "Single page:outer30percent at either end of active axis turns pages;middle40percent opens settings",
+    "Reading direction reverses previous/next mapping",
+    "Loaded image taps retain double-tap zoom priority;zoom blocks page taps",
+    "Loading and missing metadata placeholders follow same tap policy;retry doesnot also trigger settings",
+    "Reader uses native-bar-free transparent44pt floating close/title header;image viewport extends behind it"
+  ],
+  "network_loading_storage_policy_changed": false,
+  "shared_AppChrome_byte_identical_to_build32": true,
+  "tests": {
+    "counting": "Unique targeted cases at latest applicable result across five runs;not a single full-suite green run",
+    "native_unique_latest_passed": 13,
+    "UI_unique_latest_passed": 3,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.ReaderPagingTests testCommittedNeighborAndPreviousCanvasKeepTheirPhysicalPositionsAtHandoff": {
+        "result": "passed",
+        "duration_seconds": 0.007,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testContinuousModeRetainsItsCenterTapAndDoesNotGainPageTapZones": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testFastScrollTargetsItsProjectedPageWithoutLimitingToAdjacentPage": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testInteractiveDragMapsAllDirectionsAndKeepsShortDragsCancelled": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testInvalidAndOutsideTapCoordinatesDoNotPerformActions": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testLongPageInteriorIsFreeAndItsEndCanSnap": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testMiddleStripAndItsBoundariesOpenSettingsInEveryDirection": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testNeighborReboundKeepsItsSideAtZeroInEveryDirection": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testReverseMiddleShortPageDoesNotCollapseOntoContentStart": {
+        "result": "passed",
+        "duration_seconds": 0.004,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testShortHorizontalPageMatchesCenteredScrollPosition": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testSlideTravelsAlongAllFourDirectionsAndReversesForBack": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testTapZonesFollowBothAxesAndReverseReadingOrder": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.ReaderPagingTests testZoomAndUnknownDistantFramesCannotForceASnap": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.ReaderNonblockingV16UITests testSlowPlaceholdersCanBeTurnedAndReversedInAllFourDirections": {
+        "result": "passed",
+        "duration_seconds": 44.413,
+        "raw_log": "QA/Simulator-20261029T134519Z-test.log",
+        "xcresult": "QA/Simulator-20261029T134519Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderTapZonesV33UITests testImageTapZonesFollowAllDirectionsAndPreserveZoomAndBounds": {
+        "result": "passed",
+        "duration_seconds": 61.845,
+        "raw_log": "QA/Simulator-20261029T134519Z-test.log",
+        "xcresult": "QA/Simulator-20261029T134519Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.ReaderTapZonesV33UITests testLoadingAndMissingMetadataTapsKeepWorkingWithoutTriggeringRetryOrSettings": {
+        "result": "passed",
+        "duration_seconds": 36.913,
+        "raw_log": "QA/Simulator-20261029T134058Z-test.log",
+        "xcresult": "QA/Simulator-20261029T134058Z.xcresult",
+        "bundle_finalized": false
+      }
+    },
+    "prior_failed_cases": [
+      {
+        "case": "ExViewerUITests.ReaderTapZonesV33UITests testImageTapZonesFollowAllDirectionsAndPreserveZoomAndBounds",
+        "result": "failed",
+        "duration_seconds": 21.272,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.ReaderTapZonesV33UITests testLoadingAndMissingMetadataTapsKeepWorkingWithoutTriggeringRetryOrSettings",
+        "result": "failed",
+        "duration_seconds": 17.588,
+        "raw_log": "QA/Simulator-20261029T132636Z-test.log",
+        "xcresult": "QA/Simulator-20261029T132636Z.xcresult",
+        "bundle_finalized": false
+      },
+      {
+        "case": "ExViewerUITests.ReaderTapZonesV33UITests testImageTapZonesFollowAllDirectionsAndPreserveZoomAndBounds",
+        "result": "failed",
+        "duration_seconds": 48.695,
+        "raw_log": "QA/Simulator-20261029T133156Z-test.log",
+        "xcresult": "QA/Simulator-20261029T133156Z.xcresult",
+        "bundle_finalized": true
+      },
+      {
+        "case": "ExViewerUITests.ReaderTapZonesV33UITests testImageTapZonesFollowAllDirectionsAndPreserveZoomAndBounds",
+        "result": "failed",
+        "duration_seconds": 47.41,
+        "raw_log": "QA/Simulator-20261029T133659Z-test.log",
+        "xcresult": "QA/Simulator-20261029T133659Z.xcresult",
+        "bundle_finalized": false
+      }
+    ],
+    "interrupted_case_rechecked": "ReaderNonblockingV16UITests/testSlowPlaceholdersCanBeTurnedAndReversedInAllFourDirections passed in final green bundle",
+    "runner_exit_evidence": "QA/reader-taps33/fourth-run-diagnostic-stop.json",
+    "unit_policy_and_test_source_unchanged_since_execution": true,
+    "coordinate_diagnosis": "QA/reader-taps33/tap-coordinate-diagnosis.json",
+    "header_redesign": "QA/reader-taps33/header-design-correction.json",
+    "completed_green_recheck": "QA/Simulator-20261029T134519Z.xcresult",
+    "loading_case_latest_terminal_pass_log": "QA/Simulator-20261029T134058Z-test.log"
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/reader-taps33/release33-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/reader-taps33/attachments/DB64AC75-6C5F-4C58-8B83-3078CB423D38.png",
+      "name": "reader33_0_A193F87A-3C80-4ABC-B57D-04FE8AC6CB57.image-behind-header",
+      "sha256": "672d58030105afae487238e77e5174023d1ca7cd76dae08418335ccc2cdefe01",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/reader-taps33/attachments/53AE0DE2-5909-4CDE-BC89-0B3E6685B370.png",
+      "name": "reader33_0_3F43EB0D-57CE-4718-BAE4-5C5631D354B3.transparent-header",
+      "sha256": "27a51f4588ac4a3df4554720c97aad27200f8e8b0a8ad441b49aba3c9cd8d53e",
+      "visually_inspected": true
+    }
+  ],
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "pushed_or_published": false
+}

@@ -65,18 +65,51 @@ struct TagsView: View {
 
 struct LibraryView: View {
     @Binding var site: GallerySite
-    var useSearch: (SavedSearch) -> Void
+    var isActive = true
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var downloads: DownloadManager
     @State private var scope = 0
     @State private var deleteRecord: DownloadRecord?
+    @State private var sortOrders: [LibrarySortSection: LibrarySortOrder] = [:]
+    @StateObject private var readLaterSelection = LibrarySelectionStore()
+    @State private var selectingReadLater = false
+    @State private var removingReadLater = false
+    private var readLaterVisible: [Gallery] {
+        LibrarySelectionPolicy.filtered(library.snapshot.readLater, blocked: library.blockedIDs).visible
+    }
+    private var sortPreferences: LibrarySortPreferences {
+        .init(owner: library.owner, defaults: AppMode.qa ? UserDefaults(suiteName: LibrarySortPreferences.qaSuite)! : .standard)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            if scope == 0 { CloudFavoritesView(site: $site, scope: $scope) }
+            if scope == 1 { CloudFavoritesView(site: $site, scope: $scope, isActive: isActive) }
+            else if scope == 2 {
+                FloatingFeedLayout { inset in ReadingHistoryView(embedded: true, topInset: inset) }
+                    header: { FloatingHeaderPanel { scopePicker } }
+            }
             else { localLibrary }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear { sortOrders = sortPreferences.load() }
+        .onChange(of: library.owner) { _, _ in sortOrders = sortPreferences.load() }
+        .onChange(of: scope) { _, _ in endReadLaterSelection() }
+        .onChange(of: library.owner) { _, _ in endReadLaterSelection() }
+        .onChange(of: isActive) { _, active in if !active { endReadLaterSelection() } }
+        .onChange(of: readLaterVisible.map(\.id)) { _, ids in readLaterSelection.updateLoadedIDs(Set(ids)) }
+        .transformPreference(MainTabsHiddenPreference.self) { hidden in
+            hidden = hidden || (selectingReadLater && scope == 0 && isActive)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 8) {
+            if selectingReadLater && scope == 0 {
+                ReadLaterSelectionActions(summary: readLaterSelection.summary, store: readLaterSelection) { removingReadLater = true }
+            }
+        }
+        .confirmationDialog("从稍后再读移除所选作品？", isPresented: $removingReadLater, titleVisibility: .visible) {
+            Button("移出所选作品", role: .destructive) {
+                if library.removeReadLater(readLaterSelection.selectedIDs) { endReadLaterSelection() }
+            }
+        } message: { Text("站点收藏、下载文件和阅读进度会保留。") }
         .confirmationDialog("移除这份本机离线副本？", isPresented: Binding(get: { deleteRecord != nil }, set: { if !$0 { deleteRecord = nil } }), titleVisibility: .visible) {
             Button("移除本机副本", role: .destructive) { if let deleteRecord { library.removeDownload(deleteRecord) }; deleteRecord = nil }
         }
@@ -87,64 +120,45 @@ struct LibraryView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     if let error = library.error { StatusMessage(title: error) { library.load(owner: library.owner) } }
-                    if !library.snapshot.history.isEmpty { historySection }
-                    downloadsSection
-                    bookmarksSection
-                    savedSearchesSection
+                    if scope == 3 { downloadsSection }
+                    else { bookmarksSection }
                 }
                 .padding(.top, headerHeight + 8).padding(.bottom, 30)
             }
             .contentMargins(.top, headerHeight, for: .scrollIndicators)
             .accessibilityIdentifier("library.local")
         } header: {
-            FloatingHeaderPanel { scopePicker }
+            FloatingHeaderPanel {
+                VStack(spacing: 6) {
+                    scopePicker
+                    if selectingReadLater {
+                        HStack {
+                            FavoritesSelectionCount(summary: readLaterSelection.summary)
+                            Spacer()
+                            Button("退出", action: endReadLaterSelection).frame(minHeight: 44)
+                                .accessibilityIdentifier("read-later.exit")
+                        }
+                    }
+                }
+            }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("library.header.floating")
         }
     }
 
     private var scopePicker: some View {
-        Picker("资料库", selection: $scope) {
-            Text("站点收藏").tag(0)
-            Text("本机资料").tag(1)
-        }
-        .pickerStyle(.segmented)
-        .accessibilityIdentifier("library.scope")
-    }
-
-    private var visibleHistory: [ReadingRecord] {
-        library.snapshot.history.filter { TagFilter.decision(tags: $0.gallery.tags, blocked: library.blockedIDs, complete: $0.gallery.tagsComplete) == .visible }
-    }
-
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("继续阅读", count: visibleHistory.count, symbol: "clock")
-            if visibleHistory.isEmpty {
-                Text("历史记录暂时都被屏蔽标签隐藏，调整标签后可继续阅读。")
-                    .font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 12)
-            } else {
-                ForEach(visibleHistory) { record in
-                    NavigationLink(value: record.gallery) {
-                        HStack(spacing: 0) { GalleryRow(gallery: record.gallery); Text("第 \(record.page) 页").font(.caption).foregroundStyle(.secondary).padding(.trailing, 18) }
-                    }.buttonStyle(.plain)
-                        .contextMenu {
-                            NavigationLink(value: record.gallery) { Label("打开详情", systemImage: "book.closed") }
-                            Button { library.bookmark(record.gallery) } label: { Label("切换本机书签", systemImage: "bookmark") }
-                        }
-                }
-            }
-        }.accessibilityIdentifier("library.history")
+        LibraryScopePicker(selection: $scope)
     }
 
     private var downloadsSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            sectionHeader("手动下载", count: library.snapshot.downloads.count, symbol: "arrow.down.circle")
+            sectionHeader("手动下载", count: library.snapshot.downloads.count, symbol: "arrow.down.circle", sorting: .downloads)
             Text("按设备可用空间保存，切到后台会暂停；下载内容不参与浏览缓存清理。")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.bottom, 6)
             if library.snapshot.downloads.isEmpty {
                 StatusMessage(title: "在画廊详情下载当前画质，即可离线阅读。", symbol: "arrow.down.circle")
             } else {
-                ForEach(library.snapshot.downloads) { record in
+                ForEach(LibrarySorting.downloads(library.snapshot.downloads, order: sortOrders[.downloads] ?? .original, history: library.snapshot.history)) { record in
                     VStack(alignment: .leading, spacing: 9) {
                         Text(record.gallery.title).font(.subheadline.weight(.medium)).lineLimit(2)
                         HStack { Text("\(record.completed.count) / \(record.total.map(String.init) ?? "未知") 页"); Spacer(); Text(status(record.status)) }.font(.caption).foregroundStyle(.secondary)
@@ -159,6 +173,7 @@ struct LibraryView: View {
                         }.font(.subheadline)
                     }
                     .padding(.horizontal, 20).padding(.vertical, 12)
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("library.download.item.\(record.gallery.ref.gid)")
                     .contextMenu {
                         NavigationLink { ReaderView(gallery: record.gallery, offline: true) } label: {
                             Label("离线阅读", systemImage: "book")
@@ -175,45 +190,56 @@ struct LibraryView: View {
                     Divider().padding(.leading, 20)
                 }
             }
-        }.accessibilityIdentifier("library.downloads")
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("library.downloads")
     }
 
     private var bookmarksSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            sectionHeader("本机书签", count: library.snapshot.bookmarks.count, symbol: "bookmark")
-            if library.snapshot.bookmarks.isEmpty { Text("在详情或阅读器添加的本机书签会保留到这里。").font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 14) }
-            else { GalleryRows(galleries: library.snapshot.bookmarks, layout: .grid, onBookmarkToggle: { library.bookmark($0) }) }
-        }.accessibilityIdentifier("library.bookmarks")
-    }
-
-    private var savedSearchesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionHeader("常用搜索组合", count: library.snapshot.saved.count, symbol: "line.3.horizontal.decrease.circle")
-            if library.snapshot.saved.isEmpty { Text("在发现页保存搜索条件后，可从这里快速载入。 ").font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 14) }
-            ForEach(library.snapshot.saved) { saved in
-                HStack {
-                    Button { useSearch(saved) } label: {
-                        VStack(alignment: .leading, spacing: 5) { Text(saved.name).font(.headline); Text("\(saved.site.name) · \(saved.query.count) 个条件").font(.caption).foregroundStyle(.secondary) }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }.buttonStyle(.plain)
-                    Menu { Button("载入并编辑") { useSearch(saved) }; Button("删除", role: .destructive) { library.deleteSearch(saved.id) } } label: { Image(systemName: "ellipsis").padding(8) }
-                }
-                .padding(.horizontal, 20).padding(.vertical, 10)
-                .contextMenu {
-                    Button { useSearch(saved) } label: { Label("载入并编辑", systemImage: "slider.horizontal.3") }
-                    Button("删除", role: .destructive) { library.deleteSearch(saved.id) }
-                }
-                Divider().padding(.leading, 20)
+            sectionHeader("稍后再读", count: library.snapshot.readLater.count, symbol: "text.badge.plus", sorting: .bookmarks)
+            if library.snapshot.readLater.isEmpty {
+                Text("长按发现页的作品，或在详情的更多操作中加入稍后再读。").font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 14)
+                    .accessibilityIdentifier("read-later.empty")
             }
-        }.accessibilityIdentifier("library.saved")
+            else {
+                GalleryRows(galleries: LibrarySorting.galleries(library.snapshot.readLater, order: sortOrders[.bookmarks] ?? .original, history: library.snapshot.history), layout: .grid,
+                            freezeGridLayout: selectingReadLater, sourceIdentity: library.owner + ":read-later",
+                            selectionStore: selectingReadLater ? readLaterSelection : nil,
+                            onLongPressSelect: selectingReadLater ? nil : { gallery in
+                                readLaterSelection.updateLoadedIDs(Set(readLaterVisible.map(\.id)))
+                                selectingReadLater = readLaterSelection.beginSelecting(gallery.id)
+                            },
+                            onBookmarkToggle: { library.toggleReadLater($0) })
+            }
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("library.bookmarks")
     }
 
-    private func sectionHeader(_ title: String, count: Int, symbol: String) -> some View {
+    private func endReadLaterSelection() { selectingReadLater = false; readLaterSelection.clear() }
+
+    private func sectionHeader(_ title: String, count: Int, symbol: String, sorting section: LibrarySortSection? = nil) -> some View {
         HStack(spacing: 8) {
             Image(systemName: symbol).foregroundStyle(Palette.accent)
             Text(title).font(.headline)
             Spacer()
             Text("\(count)").font(.subheadline).foregroundStyle(.secondary)
+            if let section {
+                Menu {
+                    ForEach(section.options) { option in
+                        Button {
+                            sortPreferences.set(option, for: section)
+                            sortOrders[section] = option
+                        } label: {
+                            if option == (sortOrders[section] ?? section.defaultOrder) { Label(option.title, systemImage: "checkmark") }
+                            else { Text(option.title) }
+                        }.accessibilityIdentifier("library.sort.\(section.rawValue).\(option.rawValue)")
+                    }
+                    if section != .history { Text("最近阅读：无记录的作品置后，保留原序。") }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down").font(.subheadline).frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).accessibilityLabel("\(section.title)排序")
+                .accessibilityValue((sortOrders[section] ?? section.defaultOrder).title)
+                .accessibilityIdentifier("library.sort.\(section.rawValue)")
+            }
         }.padding(.horizontal, 20).padding(.vertical, 7)
     }
 
@@ -225,6 +251,7 @@ struct LibraryView: View {
 struct CloudFavoritesView: View {
     @Binding var site: GallerySite
     @Binding var scope: Int
+    var isActive = true
     @EnvironmentObject private var session: SiteSession
     @EnvironmentObject private var library: LibraryStore
     @StateObject private var pager = GalleryPager()
@@ -232,6 +259,7 @@ struct CloudFavoritesView: View {
     @State private var web: WebDestination?
     @State private var category = "all"
     @State private var selecting = false
+    @State private var initialLayoutReady = false
     @State private var pending: FavoriteAction?
     @State private var working = false
     @State private var workingCount = 0
@@ -244,6 +272,7 @@ struct CloudFavoritesView: View {
         let url: URL
         let generation: UUID
         let owner: String
+        let favoritesRevision: UUID
     }
     @State private var requestedSource: RequestedSource?
     private var displayedItems: [Gallery] {
@@ -274,9 +303,10 @@ struct CloudFavoritesView: View {
                  ScrollView {
                     LazyVStack(spacing: 0) {
                         GalleryRows(galleries: displayedItems, layout: .grid, freezeGridLayout: selecting,
+                                    sourceIdentity: "\(site.rawValue):\(category)",
                                     selectionStore: selecting ? selectionStore : nil,
                                     onLongPressSelect: selecting ? nil : beginSelection(at:),
-                                    onNearEnd: { if !selecting && pager.failure == nil { pager.more(session: session, prefetch: true) } },
+                                    onNearEnd: { if isActive && initialLayoutReady && !selecting && pager.failure == nil { pager.more(session: session, prefetch: true) } },
                                     viewport: .init(space: "favorites-feed", height: viewport.size.height, topOcclusion: headerHeight))
                         if !selecting { GalleryContinuationFooter(pager: pager) }
                         if !pager.loading && pager.failure == nil && displayedItems.isEmpty { StatusMessage(title: "当前分组没有收藏结果。", symbol: "heart") }
@@ -289,13 +319,22 @@ struct CloudFavoritesView: View {
                         reload()
                     }
                  }.contentMargins(.top, headerHeight, for: .scrollIndicators)
+                 .task(id: isActive ? headerHeight : -1) {
+                     initialLayoutReady = false
+                     guard isActive, headerHeight > 0 else { return }
+                     await Task.yield()
+                     try? await Task.sleep(nanoseconds: 120_000_000)
+                     guard !Task.isCancelled, isActive else { return }
+                     initialLayoutReady = true
+                 }
                 }
             }
           }
         } header: {
             favoritesFloatingHeader
         }
-        .safeAreaInset(edge: .bottom) {
+        .preference(key: MainTabsHiddenPreference.self, value: selecting && isActive)
+        .safeAreaInset(edge: .bottom, spacing: 8) {
             if selecting {
                 VStack(spacing: 10) {
                     if working { ProgressView("正在处理 \(workingCount) 项…") }
@@ -303,7 +342,14 @@ struct CloudFavoritesView: View {
                                               onMove: { pending = .move($0) },
                                               onRemove: { pending = .remove },
                                               categoryName: categoryName)
-                }.padding().background(FloatingChrome.background).disabled(working)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 4)
+                .background(FloatingChrome.background, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
+                .padding(.horizontal, 12)
+                .disabled(working)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("favorites.actions")
             }
         }
         .alert("管理所选收藏", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
@@ -319,38 +365,42 @@ struct CloudFavoritesView: View {
         .onChange(of: category) { _, _ in selectionStore.clear(); selecting = false; reload() }
         .onChange(of: site) { _, _ in cancel(); selectionStore.clear(); selecting = false; category = "all"; reload() }
         .onChange(of: session.hasCredentials) { _, _ in reload() }
+        .onChange(of: session.favoritesRevision) { _, _ in reload() }
         .onChange(of: session.generation) { _, _ in cancel(); selectionStore.clear(); selecting = false; message = nil }
         .onChange(of: session.owner) { _, _ in cancel(); selectionStore.clear(); selecting = false; message = nil }
-        .onDisappear { cancel(); pager.cancel(); selectionStore.clear(); selecting = false }
+        .onChange(of: isActive) { _, active in
+            if active { reload(force: false) }
+            else { initialLayoutReady = false; cancel(); pager.cancel(); selectionStore.clear(); selecting = false }
+        }
+        .onDisappear { initialLayoutReady = false; cancel(); pager.cancel(); selectionStore.clear(); selecting = false }
     }
 
     private var favoritesFloatingHeader: some View {
         FloatingHeaderPanel {
             VStack(spacing: 6) {
-                Picker("资料库", selection: $scope) {
-                    Text("站点收藏").tag(0)
-                    Text("本机资料").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .accessibilityIdentifier("library.scope")
+                LibraryScopePicker(selection: $scope).disabled(working)
                 if session.hasCredentials || AppMode.qa {
                 HStack {
+                    if !selecting {
                     Menu {
                         Button("全部分组") { category = "all" }
                         ForEach(0...9, id: \.self) { index in Button(categoryName(index)) { category = String(index) } }
                     } label: { Label(category == "all" ? "全部分组" : categoryName(Int(category) ?? 0), systemImage: "folder").frame(minHeight: 44) }
-                        .disabled(working || selecting)
+                        .disabled(working)
+                    }
                     Spacer()
                     if selecting {
                         FavoritesSelectionCount(summary: selectionStore.summary)
-                        Button("完成") {
+                        Button("退出") {
                             selecting = false
                             selectionStore.clear()
                             if pager.interrupted { pager.retry(session: session) }
                         }
+                        .accessibilityLabel("退出多选")
                         .disabled(working)
                         .frame(minHeight: 44)
                         .accessibilityIdentifier("favorites.edit")
+                        .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 .font(.subheadline)
@@ -383,7 +433,7 @@ struct CloudFavoritesView: View {
     }
     private var confirmationTitle: String {
         if case let .move(index)? = pending { return "将 \(selectionStore.selectedIDs.count) 项收藏移至「\(categoryName(index))」？" }
-        return "从站点收藏移除 \(selectionStore.selectedIDs.count) 项？本机下载和书签会保留。"
+        return "从站点收藏移除 \(selectionStore.selectedIDs.count) 项？本机下载和稍后再读会保留。"
     }
     private func filteredItems() -> [Gallery] {
         LibrarySelectionPolicy.filtered(displayedItems, blocked: library.blockedIDs).visible
@@ -466,10 +516,11 @@ struct CloudFavoritesView: View {
         }
     }
     private func reload(force: Bool = true) {
+        guard isActive else { return }
         guard AppMode.qa || session.hasCredentials, let base = try? SearchQuery().url(site: site, favorites: true), var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else { return }
         components.queryItems?.removeAll { $0.name == "favcat" }; components.queryItems?.append(.init(name: "favcat", value: category))
         if let url = components.url {
-            let source = RequestedSource(url: url, generation: session.generation, owner: session.owner)
+            let source = RequestedSource(url: url, generation: session.generation, owner: session.owner, favoritesRevision: session.favoritesRevision)
             if !force, requestedSource == source {
                 if pager.interrupted { pager.retry(session: session) }
                 return
@@ -662,11 +713,11 @@ private struct LocalDataManagementView: View {
                 LabeledContent("浏览缓存上限", value: "2 GB")
                 LabeledContent("手动下载", value: "按设备可用空间保存")
                 LabeledContent("阅读历史", value: "\(library.snapshot.history.count) 项")
-                LabeledContent("本机书签", value: "\(library.snapshot.bookmarks.count) 项")
+                LabeledContent("稍后再读", value: "\(library.snapshot.bookmarks.count) 项")
                 Button("清理浏览缓存", role: .destructive) {
                     Task { do { try await MediaRepository.shared.clear(owner: library.owner); message = "浏览缓存已清理" } catch { message = "缓存清理未完成，请重试。" } }
                 }.disabled(downloads.running != nil)
-                Text("清理浏览缓存会保留离线副本、书签、标签、阅读历史和搜索组合。")
+                Text("清理浏览缓存会保留离线副本、稍后再读、标签、阅读历史和搜索组合。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {

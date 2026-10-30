@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-28T23:43:47.047992+00:00",
+  "version": "0.1.0",
+  "build": "28",
+  "stage": "LOCAL_IMPLEMENTATION_AND_RELEASE_BUILD_VERIFIED",
+  "base_commit": "f2a4b84aacf3954156943402ff195919281d75e3",
+  "source_state": "UNCOMMITTED_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "f7fe3277d7954b224a0bf60946d0df6b67d62c239a2d72689cd10f268ae3cc0e",
+  "implemented": {
+    "tag_selection": [
+      "Candidate andfavorite alias toggle the same pending ID",
+      "Full44pt favorite row hit area",
+      "Selected tags above suggestions with explicit removal andper-tag match menu",
+      "Cancel discards pending;Done edits parent draft;explicit Search executes gallery query"
+    ],
+    "history": [
+      "Reading records labeled阅读历史 inlibrary",
+      "Query records labeled最近搜索 insearch",
+      "Existing library/search files remain separate;legacy bytes preserved inunit verification",
+      "No detail-only browsing history ordata migration introduced"
+    ],
+    "local_sort": {
+      "reading_history": [
+        "recent reading",
+        "oldest reading",
+        "natural title"
+      ],
+      "bookmarks_and_manual_downloads": [
+        "original order",
+        "natural title",
+        "recent reading"
+      ],
+      "defaults": "History recent;bookmarks/downloads original",
+      "missing_reading_record": "After known reading dates;stable original relative order",
+      "preference_scope": "Independent byowner andsection",
+      "data_effect": "Display-only;no rewriting oforiginal arrays,timestamps,pages orfiles"
+    },
+    "multiselect": "Long press selects;selection taps toggle;退出 exits;plain tap opens detail;IDs stable acrosssort/append",
+    "continuation": [
+      "New discovery/search feed positioned before viewport continuation enabled",
+      "Favorites reload only whilelibrary active;initial layout readiness gates continuation",
+      "Parsed next links andexisting pager/cache identity retained"
+    ],
+    "accessibility": "44pt sort/removal controls;section containment preserves row IDs;large-type history puts progress below row"
+  },
+  "tests": {
+    "native_unique_passed": 36,
+    "UI_unique_passed": 14,
+    "latest_unresolved_failures": 0,
+    "counting": "Latest applicable outcome foreach of50unique cases;notasingle clean run",
+    "case_matrix": "QA/library-tags28/tests-state.json",
+    "full_suite": "QA/Simulator-20261028T230425Z.xcresult",
+    "tag_rechecks": "QA/Simulator-20261028T231409Z.xcresult",
+    "navigation_rechecks": "QA/Simulator-20261028T232607Z.xcresult",
+    "active_favorites_rechecks": "QA/Simulator-20261028T233119Z.xcresult",
+    "accessibility_rechecks": "QA/Simulator-20261028T233958Z.xcresult",
+    "historical_failures": "Retained underQA/library-tags28,including original xcresults andfailure records",
+    "final_copy_clarification": "Sort-menu note explicitly limits no-reading-record tail behavior torecent-reading mode;no logic change,no additional functional test rerun",
+    "source_delta_evidence": "QA/library-tags28/sort-note-copy-delta.json"
+  },
+  "release_build": "PASSED",
+  "visual_evidence": {
+    "tags": "QA/library-tags28/recheck-attachments/D663AA00-DBDF-46F2-9C39-8D88DA6439B7.png",
+    "large_type": "QA/library-tags28/accessibility-final-attachments/E29C4BC2-B48C-42EB-9B31-F86F23C26E2C.png"
+  },
+  "server_sorting": {
+    "ordinary_search": "No supported global sort parameter confirmed fromofficial documentation,live public search form andofficial script;none added",
+    "favorites": "Official docs confirm favorited/posted date sorting;available Chrome context requires login,soactual parameters/cursor semantics unverified;none added",
+    "evidence": "QA/library-tags28/server-sorting-assessment.json"
+  },
+  "request_concurrency_and_rate_limits": "UNCHANGED",
+  "account_or_financial_mutations": "NONE",
+  "publication_merge_push": "NOT_AUTHORIZED_OR_ATTEMPTED",
+  "physical_phone_install": "NOT_AUTHORIZED_OR_ATTEMPTED",
+  "real_account_acceptance": "NOT_EXERCISED",
+  "simulator": "ExViewer QA,iPhone18Pro,iOS27.0,neutral offline fixtures"
+}

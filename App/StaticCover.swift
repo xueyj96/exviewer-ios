@@ -183,6 +183,7 @@ struct StaticCover: View {
                         .resizable()
                         .aspectRatio(contentMode: contentMode)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityLabel("画廊封面").accessibilityIdentifier("cover.decoded-image")
                 } else {
                     Color.clear
                 }

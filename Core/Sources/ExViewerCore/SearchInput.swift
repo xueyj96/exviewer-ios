@@ -131,11 +131,20 @@ public enum SearchInputParser {
         if quotedKeywordCount > 0 { query.matchPhrase = true }
         query.text = keywords.joined(separator: " ")
 
-        // Existing rules from the filter sheet remain. An inline rule replaces
-        // an existing rule for the same tag, including a different match mode.
+        // An explicit positive author input replaces the previous positive
+        // author selection; it must not silently intersect with the old one.
+        if parsedRules.contains(where: { $0.tag.namespace == "artist" && $0.match == .all }) {
+            query.replaceArtist("")
+        }
+        // Other filter rules remain. An inline rule replaces the same tag,
+        // including a different match mode.
         for rule in parsedRules {
             query.rules.removeAll { $0.id == rule.id }
             query.rules.append(rule)
+        }
+        let artist = query.artist.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !artist.isEmpty {
+            query.rules.removeAll { $0.match == .all && $0.tag.namespace == "artist" && $0.tag.name.lowercased() == artist }
         }
         return ParsedSearchInput(query: query, inputRules: parsedRules)
     }

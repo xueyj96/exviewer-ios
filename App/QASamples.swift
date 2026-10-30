@@ -4,6 +4,43 @@ import UniformTypeIdentifiers
 import ExViewerCore
 
 enum QASamples {
+    @MainActor static func installOfflineSample(in library: LibraryStore) {
+        guard AppMode.qa else { return }
+        let gallery = galleries[0]
+        let directory = library.offlineDirectory(gallery)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            var completed: [Int: String] = [:]
+            for page in pages {
+                let name = "page-\(page.index).media"
+                let target = directory.appendingPathComponent(name)
+                if !FileManager.default.fileExists(atPath: target.path) { try FileManager.default.copyItem(at: page.url, to: target) }
+                completed[page.index] = name
+            }
+            library.updateDownload(.init(gallery: gallery, status: .complete, completed: completed, total: completed.count))
+        } catch { assertionFailure("Could not install neutral offline QA fixture") }
+    }
+
+    static var favoriteGroupName: String {
+        guard AppMode.qa else { return "已读" }
+        let prefix = "--qa-favorite-group="
+        return ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }).map { String($0.dropFirst(prefix.count).prefix(200)) } ?? "已读"
+    }
+    static var sortingLibrary: LibrarySnapshot {
+        let names = ["Beta 10", "Alpha 2", "Alpha 10", "Never Read"]
+        let values = names.enumerated().map { index, title -> Gallery in
+            var value = galleries[index]; value.title = title; value.ref.gid = Int64(7201 + index)
+            value.cover = cover(seed: index + 1); return value
+        }
+        var result = LibrarySnapshot()
+        result.favoriteTags = [.init(namespace: "language", name: "english")]
+        result.history = [0, 2, 1].map { index in
+            .init(gallery: values[index], page: index + 1, date: Date(timeIntervalSince1970: Double((index == 2 ? 3 : index + 1) * 100)))
+        }
+        result.bookmarks = [0, 3, 2, 1].map { values[$0] }
+        result.downloads = [3, 1, 0, 2].map { .init(gallery: values[$0], status: .paused, total: 10) }
+        return result
+    }
     static var galleries: [Gallery] {
         ["海岸线 · 插画与速写", "日常风景记录 / FIELD NOTES", "色彩与形状 · 动图习作", "城市散步手记"].enumerated().map { index, title in
             var gallery = Gallery(ref: .init(site: .ex, gid: Int64(index + 1), token: "preview"), title: title, category: "Non-H", uploader: "Preview Studio", pages: 3, rating: 4.75, tags: [.init(namespace: "language", name: "chinese"), .init(namespace: "other", name: "full color"), .init(namespace: "artist", name: "preview studio")]); gallery.tagsComplete = true
@@ -13,13 +50,15 @@ enum QASamples {
                 if index == 2 { gallery.title = "缺少元数据"; gallery.category = ""; gallery.pages = nil }
             }
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-reader-many") { gallery.pages = 12 }
+            if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-stored-bookmark-covers") { gallery.cover = cover(seed: index + 1) }
             if AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-rating-filter") { gallery.rating = [2.8, 2.9, 3.0, 4.75][index] }
             return gallery
         }
     }
     static func detail(_ gallery: Gallery) -> GalleryDetail {
         let archive = AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-detail-actions") ? GallerySite.ex.baseURL.appendingPathComponent("archiver.php") : nil
-        return GalleryDetail(gallery: gallery, pages: pages, next: nil, archive: archive, favoriteName: nil)
+        let favorite = AppMode.qa && ProcessInfo.processInfo.arguments.contains("--qa-favorite-existing") ? favoriteGroupName : nil
+        return GalleryDetail(gallery: gallery, pages: pages, next: nil, archive: archive, favoriteName: favorite)
     }
     static var additionalGalleries: [Gallery] {
         Array(galleries.prefix(2)).enumerated().map { index, source in
@@ -27,6 +66,14 @@ enum QASamples {
         }
     }
     static var feedGalleries: [Gallery] {
+        if AppMode.qa, ProcessInfo.processInfo.arguments.contains("--qa-feed-performance") {
+            return (0..<1000).map { index in
+                var gallery = galleries[index % 4]
+                gallery.ref.gid = Int64(20000 + index); gallery.title = "浏览性能样例 \(index + 1)"
+                gallery.cover = cover(seed: index % 4 + 1)
+                return gallery
+            }
+        }
         guard AppMode.qa, ProcessInfo.processInfo.arguments.contains("--qa-feed-paging") else { return galleries }
         return galleries + (4..<12).map { index in
             var gallery = galleries[index % 4]

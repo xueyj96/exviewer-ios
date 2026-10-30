@@ -75,8 +75,14 @@ import ExViewerCore
         items = retained; if retained.isEmpty { categories = [:]; cachedAt = nil }
         sourceOwner = session.owner; sourceGeneration = session.generation; interrupted = false
         if self.qa {
+            if url.path == "/favorites.php", ProcessInfo.processInfo.arguments.contains("--qa-favorite-sync-list") {
+                let site = GallerySite.allCases.first { $0.host == url.host } ?? .ex
+                items = NativeFavoritesQA.favorites(site: site)
+                categories = Dictionary(uniqueKeysWithValues: NativeFavoritesQA.groups.enumerated().map { (String($0.offset), $0.element) })
+                next = nil; return
+            }
             items = QASamples.feedGalleries.filter { GalleryRatingFilter.includes($0, minimum: minimumRating) }; categories = ["0": "常用", "1": "稍后阅读"]
-            next = URL(string: "https://exhentai.org/?qa-page=2"); return
+            next = ProcessInfo.processInfo.arguments.contains("--qa-feed-performance") ? nil : URL(string: "https://exhentai.org/?qa-page=2"); return
         }
         let current = context, account = session.generation, owner = session.owner
         loading = true; activeURL = url; activePriority = .foreground; retryURL = url

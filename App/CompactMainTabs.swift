@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct MainTabsHiddenPreference: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 struct FloatingFeedLayout<Feed: View, Header: View>: View {
     @State private var headerHeight: CGFloat = 0
     private let feed: (CGFloat) -> Feed
@@ -56,6 +61,7 @@ struct FloatingHeaderPanel<Content: View>: View {
 
 struct CompactMainTabs<Content: View>: View {
     @Binding var selection: Int
+    @State private var hiddenByContent = false
     let content: Content
 
     private struct Destination: Identifiable {
@@ -68,7 +74,7 @@ struct CompactMainTabs<Content: View>: View {
     private let destinations = [
         Destination(id: 0, title: "发现", symbol: "square.grid.2x2", identifier: "main.tab.discover"),
         Destination(id: 1, title: "资料库", symbol: "books.vertical", identifier: "main.tab.library"),
-        Destination(id: 2, title: "账号", symbol: "person.crop.circle", identifier: "main.tab.account")
+        Destination(id: 2, title: "我的", symbol: "person.crop.circle", identifier: "main.tab.account")
     ]
 
     init(selection: Binding<Int>, @ViewBuilder content: () -> Content) {
@@ -79,7 +85,8 @@ struct CompactMainTabs<Content: View>: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaInset(edge: .bottom, spacing: 0) { compactBar }
+            .safeAreaInset(edge: .bottom, spacing: 0) { if !hiddenByContent { compactBar } }
+            .onPreferenceChange(MainTabsHiddenPreference.self) { hiddenByContent = $0 }
     }
 
     private var compactBar: some View {

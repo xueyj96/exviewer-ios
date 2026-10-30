@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T10:11:27.703159+00:00",
+  "version": "0.1.0",
+  "build": "30",
+  "stage": "LOCAL_IMPLEMENTATION_RELEASE_AND_TARGETED_SIMULATOR_CHECKS_VERIFIED",
+  "runtime_source_sha256": "7feb15f3ed371e26f9d3a8d41ce5935d37fdf8aec106509bb27f421ecbec10f2",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "problem": "Gallery.stored removes transient cover URLs;CoverView returned without resolving missing sources;QA generated covers hid the gap",
+  "implemented": [
+    "Resolve visible stored-gallery cover sources in memory through existing official gdata metadata protocol",
+    "Coalesce duplicate requests;serial batches of25;50ms coalescing delay;1.3s between starts;64pending keys and256cached sources",
+    "Use existing site page scheduler and media repository;no concurrency orcache capacity increases",
+    "Account/session context reset and cancelled-consumer detachment;late old results ignored",
+    "Failures show explicit retry and keep gallery navigation available",
+    "Stored bookmark/history bytes,schema,sort order andreading progress remain unchanged",
+    "QA persists and reopens real library records with missing cover source;direct cover fixture fallback disabled for this flow"
+  ],
+  "tests": {
+    "native_passed": 25,
+    "UI_passed": 4,
+    "failed": 0,
+    "xcresult": "QA/Simulator-20261029T100652Z.xcresult",
+    "matrix": "QA/bookmark-covers30/test-matrix.json",
+    "coverage": [
+      "Bookmark save/reopen thenmetadata request/response restore;library file byte identity",
+      "60requested sources in3batches,no unrequested rows",
+      "Shared cancellation,account/session isolation,bounded cache,missing source recovery",
+      "Static image decode reuse/failure behavior",
+      "Bookmark sorting,cover aspect ratios,visible book/history screenshots,retry anddetail navigation"
+    ],
+    "first_reproduction_attempt": "Failed selecting non-exposed nested cover AX node;corrected to stable gallery button;original failed result retained;source proof ofmissing recovery unchanged"
+  },
+  "release_build": {
+    "configuration": "Release",
+    "version": "0.1.0 (30)",
+    "result": "SUCCEEDED",
+    "log": "QA/bookmark-covers30/release30-build.log"
+  },
+  "phone_or_real_account_acceptance": "NOT_EXERCISED_BY_SIMULATOR",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE;NOT_PUSHED_OR_PUBLISHED",
+  "data_migration": false,
+  "limits": [
+    "Simulator uses neutral local fixtures;not real-account network acceptance",
+    "Saved local bookmarks remain metadata references;offline content ismanaged separately asmanual downloads"
+  ]
+}

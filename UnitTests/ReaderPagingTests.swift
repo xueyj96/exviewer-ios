@@ -2,6 +2,54 @@ import XCTest
 @testable import ExViewer
 
 final class ReaderPagingTests: XCTestCase {
+    func testTapZonesFollowBothAxesAndReverseReadingOrder() {
+        let viewport = CGRect(x: 20, y: 100, width: 400, height: 800)
+        for direction in ReaderDirection.allCases {
+            for cross in [0.08, 0.5, 0.92] {
+                for (position, expected) in [(0.15, ReaderTapAction.previous), (0.85, .next)] {
+                    let axis = direction.reverseOrder ? 1 - position : position
+                    let point = CGPoint(x: viewport.minX + viewport.width * (direction.horizontal ? axis : cross),
+                                        y: viewport.minY + viewport.height * (direction.horizontal ? cross : axis))
+                    XCTAssertEqual(ReaderTapPolicy.action(at: point, in: viewport, direction: direction, mode: .singlePage), expected)
+                }
+            }
+        }
+    }
+
+    func testMiddleStripAndItsBoundariesIdentifyCenterInEveryDirection() {
+        let viewport = CGRect(x: 0, y: 0, width: 400, height: 800)
+        for direction in ReaderDirection.allCases {
+            for position in [0.3, 0.5, 0.7] {
+                for cross in [0.08, 0.5, 0.92] {
+                    let point = CGPoint(x: viewport.width * (direction.horizontal ? position : cross),
+                                        y: viewport.height * (direction.horizontal ? cross : position))
+                    XCTAssertEqual(ReaderTapPolicy.action(at: point, in: viewport, direction: direction, mode: .singlePage), .center)
+                }
+            }
+        }
+    }
+
+    func testInvalidAndOutsideTapCoordinatesDoNotPerformActions() {
+        let viewport = CGRect(x: 20, y: 100, width: 400, height: 800)
+        for point in [CGPoint(x: 19, y: 400), CGPoint(x: 200, y: 99), CGPoint(x: 421, y: 400),
+                      CGPoint(x: 200, y: 901), CGPoint(x: CGFloat.nan, y: 400), CGPoint(x: 200, y: CGFloat.infinity)] {
+            XCTAssertNil(ReaderTapPolicy.action(at: point, in: viewport, direction: .leftToRight, mode: .singlePage))
+        }
+        for invalid in [CGRect.zero, CGRect(x: 0, y: 0, width: CGFloat.infinity, height: 100)] {
+            XCTAssertNil(ReaderTapPolicy.action(at: .zero, in: invalid, direction: .leftToRight, mode: .singlePage))
+        }
+    }
+
+    func testContinuousModeRetainsItsCenterTapAndDoesNotGainPageTapZones() {
+        let viewport = CGRect(x: 0, y: 0, width: 400, height: 800)
+        for direction in ReaderDirection.allCases {
+            XCTAssertEqual(ReaderTapPolicy.action(at: CGPoint(x: 200, y: 400), in: viewport, direction: direction, mode: .continuous), .center)
+            for point in [CGPoint(x: 30, y: 400), CGPoint(x: 370, y: 400), CGPoint(x: 200, y: 30), CGPoint(x: 200, y: 770)] {
+                XCTAssertNil(ReaderTapPolicy.action(at: point, in: viewport, direction: direction, mode: .continuous))
+            }
+        }
+    }
+
     func testFastScrollTargetsItsProjectedPageWithoutLimitingToAdjacentPage() {
         let frames = (0..<10).map { CGRect(x: 0, y: CGFloat($0 * 400), width: 300, height: 400) }
         let target = ReaderSnapPolicy.offset(proposed: 2030, viewport: 400, content: 4000,

@@ -8,20 +8,27 @@ struct ImageCanvasPresentation: Equatable {
     let loadCount: Int
 }
 
+struct CanvasInteractions {
+    var singleTap: ((CGPoint) -> Void)? = nil
+    /// Return true when the reader consumes the double tap; otherwise zoom.
+    var doubleTap: ((CGPoint) -> Bool)? = nil
+    var longPress: (() -> Void)? = nil
+}
+
 struct MediaCanvas: UIViewRepresentable {
     var file: URL
     var animated = true
     var onZoomChanged: ((Bool) -> Void)? = nil
     var onImageSizeChanged: ((CGSize) -> Void)? = nil
-    var onSingleTap: ((CGPoint) -> Void)? = nil
+    var interactions = CanvasInteractions()
     var onPresentation: ((ImageCanvasPresentation) -> Void)? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator(onZoomChanged: onZoomChanged, onImageSizeChanged: onImageSizeChanged, onSingleTap: onSingleTap, onPresentation: onPresentation) }
+    func makeCoordinator() -> Coordinator { Coordinator(onZoomChanged: onZoomChanged, onImageSizeChanged: onImageSizeChanged, interactions: interactions, onPresentation: onPresentation) }
     func makeUIView(context: Context) -> ImageCanvasView {
         let view = ImageCanvasView()
         view.onZoomChanged = { [weak coordinator = context.coordinator] zoomed in coordinator?.report(zoomed) }
         view.onImageSizeChanged = { [weak coordinator = context.coordinator] size in coordinator?.report(size) }
-        view.onSingleTap = onSingleTap == nil ? nil : { [weak coordinator = context.coordinator] point in coordinator?.reportTap(point) }
+        view.readerInteractions = context.coordinator.canvasInteractions
         view.onPresentation = { [weak coordinator = context.coordinator] value in coordinator?.reportPresentation(value) }
         view.load(file, animate: animated)
         return view
@@ -29,11 +36,11 @@ struct MediaCanvas: UIViewRepresentable {
     func updateUIView(_ view: ImageCanvasView, context: Context) {
         context.coordinator.onZoomChanged = onZoomChanged
         context.coordinator.onImageSizeChanged = onImageSizeChanged
-        context.coordinator.onSingleTap = onSingleTap
+        context.coordinator.interactions = interactions
         context.coordinator.onPresentation = onPresentation
         view.onZoomChanged = { [weak coordinator = context.coordinator] zoomed in coordinator?.report(zoomed) }
         view.onImageSizeChanged = { [weak coordinator = context.coordinator] size in coordinator?.report(size) }
-        view.onSingleTap = onSingleTap == nil ? nil : { [weak coordinator = context.coordinator] point in coordinator?.reportTap(point) }
+        view.readerInteractions = context.coordinator.canvasInteractions
         view.onPresentation = { [weak coordinator = context.coordinator] value in coordinator?.reportPresentation(value) }
         if view.file != file {
             context.coordinator.invalidatePendingReports()
@@ -49,10 +56,15 @@ struct MediaCanvas: UIViewRepresentable {
     final class Coordinator {
         var onZoomChanged: ((Bool) -> Void)?
         var onImageSizeChanged: ((CGSize) -> Void)?
-        var onSingleTap: ((CGPoint) -> Void)?
+        var interactions: CanvasInteractions
         var onPresentation: ((ImageCanvasPresentation) -> Void)?
         private var revision = UUID()
-        init(onZoomChanged: ((Bool) -> Void)?, onImageSizeChanged: ((CGSize) -> Void)?, onSingleTap: ((CGPoint) -> Void)?, onPresentation: ((ImageCanvasPresentation) -> Void)?) { self.onZoomChanged = onZoomChanged; self.onImageSizeChanged = onImageSizeChanged; self.onSingleTap = onSingleTap; self.onPresentation = onPresentation }
+        init(onZoomChanged: ((Bool) -> Void)?, onImageSizeChanged: ((CGSize) -> Void)?, interactions: CanvasInteractions, onPresentation: ((ImageCanvasPresentation) -> Void)?) { self.onZoomChanged = onZoomChanged; self.onImageSizeChanged = onImageSizeChanged; self.interactions = interactions; self.onPresentation = onPresentation }
+        var canvasInteractions: CanvasInteractions {
+            .init(singleTap: interactions.singleTap == nil ? nil : { [weak self] in self?.reportTap($0) },
+                  doubleTap: { [weak self] in self?.interactions.doubleTap?($0) ?? false },
+                  longPress: interactions.longPress == nil ? nil : { [weak self] in self?.reportLongPress() })
+        }
         func invalidatePendingReports() { revision = UUID() }
         func report(_ zoomed: Bool) {
             let expectedRevision = revision
@@ -71,9 +83,15 @@ struct MediaCanvas: UIViewRepresentable {
             }
         }
         func reportTap(_ point: CGPoint) {
-            let expected = revision, callback = onSingleTap
+            let expected = revision, callback = interactions.singleTap
             DispatchQueue.main.async { [weak self] in
                 guard self?.revision == expected else { return }; callback?(point)
+            }
+        }
+        func reportLongPress() {
+            let expected = revision, callback = interactions.longPress
+            DispatchQueue.main.async { [weak self] in
+                guard self?.revision == expected else { return }; callback?()
             }
         }
         func reportPresentation(_ value: ImageCanvasPresentation) {
@@ -90,6 +108,7 @@ final class ImageCanvasView: UIView, UIScrollViewDelegate {
     private let scroll = UIScrollView()
     private let imageView = UIImageView()
     private let singleTap = UITapGestureRecognizer()
+    private let longPress = UILongPressGestureRecognizer()
     private var asset: ReaderImageAsset?
     private var loadTask: Task<Void, Never>?
     private var frameTasks: [Int: Task<Void, Never>] = [:]
@@ -113,12 +132,18 @@ final class ImageCanvasView: UIView, UIScrollViewDelegate {
     private var presentedFile: URL?
     var onZoomChanged: ((Bool) -> Void)?
     var onImageSizeChanged: ((CGSize) -> Void)?
-    var onSingleTap: ((CGPoint) -> Void)? { didSet { singleTap.isEnabled = onSingleTap != nil } }
+    var readerInteractions = CanvasInteractions() {
+        didSet {
+            singleTap.isEnabled = readerInteractions.singleTap != nil
+            longPress.isEnabled = readerInteractions.longPress != nil
+        }
+    }
     var onPresentation: ((ImageCanvasPresentation) -> Void)?
     private(set) var file: URL?
     override init(frame: CGRect) {
         super.init(frame: frame)
         scroll.delegate = self; scroll.minimumZoomScale = 1; scroll.maximumZoomScale = 5
+        scroll.contentInsetAdjustmentBehavior = .never
         scroll.panGestureRecognizer.isEnabled = false
         scroll.showsVerticalScrollIndicator = false; scroll.showsHorizontalScrollIndicator = false
         imageView.contentMode = .scaleAspectFit
@@ -126,6 +151,10 @@ final class ImageCanvasView: UIView, UIScrollViewDelegate {
         let tap = UITapGestureRecognizer(target: self, action: #selector(zoom(_:))); tap.numberOfTapsRequired = 2; scroll.addGestureRecognizer(tap)
         singleTap.addTarget(self, action: #selector(tapped(_:)))
         singleTap.require(toFail: tap); singleTap.isEnabled = false
+        longPress.addTarget(self, action: #selector(held(_:)))
+        longPress.minimumPressDuration = 0.5; longPress.allowableMovement = 10
+        longPress.isEnabled = false; scroll.addGestureRecognizer(longPress)
+        singleTap.require(toFail: longPress); tap.require(toFail: longPress)
         singleTap.cancelsTouchesInView = false; scroll.addGestureRecognizer(singleTap)
         loadingIndicator.hidesWhenStopped = true
         loadingIndicator.color = .white
@@ -308,9 +337,33 @@ final class ImageCanvasView: UIView, UIScrollViewDelegate {
         let frame = frameCount > 0 ? "frame \(index + 1) / \(frameCount)" : "frame 0 / 0"
         accessibilityValue = "\(frame); \(scroll.zoomScale > 1.001 ? "zoomed" : "fit"); \(file?.lastPathComponent ?? "none"); canvas=\(canvasIdentity); loads=\(loadCount); rendered=\(imageView.image != nil)"
     }
-    @objc private func zoom(_ tap: UITapGestureRecognizer) { scroll.setZoomScale(scroll.zoomScale > 1 ? 1 : 2.5, animated: true) }
+    override var accessibilityValue: String? {
+        get {
+            guard AppMode.qa else { return super.accessibilityValue }
+            func rect(_ value: CGRect) -> String { "\(value.minX),\(value.minY),\(value.width),\(value.height)" }
+            var value = super.accessibilityValue ?? ""
+            value += ";viewport=\(rect(convert(bounds, to: window)))"
+            if let image = imageView.image, image.size.width > 0, image.size.height > 0 {
+                let scale = min(imageView.bounds.width / image.size.width, imageView.bounds.height / image.size.height)
+                let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+                let fitted = CGRect(x: imageView.bounds.midX - size.width / 2,
+                                    y: imageView.bounds.midY - size.height / 2, width: size.width, height: size.height)
+                value += ";imageRect=\(rect(imageView.convert(fitted, to: window)))"
+            }
+            return value + ";zoomScale=\(scroll.zoomScale);scrollOffset=\(scroll.contentOffset.x),\(scroll.contentOffset.y)"
+        }
+        set { super.accessibilityValue = newValue }
+    }
+    @objc private func zoom(_ tap: UITapGestureRecognizer) {
+        let point = convert(tap.location(in: self), to: window)
+        if readerInteractions.doubleTap?(point) == true { return }
+        scroll.setZoomScale(scroll.zoomScale > 1 ? 1 : 2.5, animated: true)
+    }
+    @objc private func held(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began { readerInteractions.longPress?() }
+    }
     @objc private func tapped(_ tap: UITapGestureRecognizer) {
         guard scroll.zoomScale <= 1.001 else { return }
-        onSingleTap?(convert(tap.location(in: self), to: window))
+        readerInteractions.singleTap?(convert(tap.location(in: self), to: window))
     }
 }

@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-29T15:32:34.496027+00:00",
+  "version": "0.1.0",
+  "build": "36",
+  "stage": "LOCAL_LIBRARY_ACTIONS_AND_STABLE_GRID_RELEASE_AND_TARGETED_CHECKS_VERIFIED",
+  "source_state": "UNCOMMITTED_LOCAL_WORKTREE_NOT_PUSHED",
+  "runtime_source_sha256": "452c57aed527fb48d0dcc9f1923345f3b40c5617a884a1900f3f3b07ed37e70a",
+  "runtime_hash_algorithm": "SHA256 of UTF-8 JSON path-to-file-SHA256 object, sorted keys, separators comma/colon, ensure_ascii=false; App/** and Core/Sources/**",
+  "runtime_delta_from_build35": [
+    "App/CompactMainTabs.swift",
+    "App/DiscoverView.swift",
+    "App/ExViewerApp.swift",
+    "App/GalleryGridPlacement.swift",
+    "App/LibrarySelectionStore.swift",
+    "App/LibraryViews.swift",
+    "App/QASamples.swift",
+    "App/ReaderView.swift"
+  ],
+  "implemented": [
+    "Favorite selection actions replace main tabs while active; completion and exit restore main tabs",
+    "Compact icons on narrow or large-type layouts retain at least44pt touch targets and accessible labels",
+    "Offline pushed reader hides underlying main tabs",
+    "Existing gallery cards retain column membership and within-column order when aspect metadata arrives or new pages append",
+    "Explicit source/account/order changes reset placement; removals preserve surviving memberships"
+  ],
+  "tradeoffs": [
+    "Natural cover aspect updates can still change card height; cross-column redistribution is prevented",
+    "Selection temporarily replaces root navigation; exit remains available in header",
+    "Transient placement has no persistent schema or storage migration"
+  ],
+  "alternatives_considered": [
+    "Stack both bottom bars: wastes viewing height and keeps two concurrent navigation/action surfaces",
+    "Fixed crop ratio: would hide varying cover proportions requested by user"
+  ],
+  "network_loading_storage_policy_changed": false,
+  "tests": {
+    "counting": "Latest applicable result per unique case across2 targeted runs; final green bundle has3 UI cases; not a full-suite run",
+    "native_unique_latest_passed": 7,
+    "UI_unique_latest_passed": 6,
+    "unresolved_required_case_failures": 0,
+    "cases": {
+      "ExViewerTests.GalleryGridPlacementTests testAppendUsesCurrentHeightsButPreservesAllExistingMemberships": {
+        "result": "passed",
+        "duration_seconds": 0.003,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testDuplicateAndInvalidAspectInputsRemainFiniteAndEmptyResets": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testInitialEqualHeightsAlternateWithDeterministicTies": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testLateAspectUpdatesDoNotRedistributeExistingCards": {
+        "result": "passed",
+        "duration_seconds": 0.001,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testPrependAndExplicitReorderResetToTheNewResultOrder": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testRemovalClosesGapsWithoutMovingSurvivorsBetweenColumns": {
+        "result": "passed",
+        "duration_seconds": 0.0,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerTests.GalleryGridPlacementTests testThousandCardPagedFeedKeepsMembershipAfterEveryAppend": {
+        "result": "passed",
+        "duration_seconds": 0.016,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.CompactMainTabsV16UITests testCompactBarSwitchesAllRootTabsWithoutShowingNativeBar": {
+        "result": "passed",
+        "duration_seconds": 27.523,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testBulkRemoveAndMoveAreReachableAndMainTabsRestoreAfterCompletion": {
+        "result": "passed",
+        "duration_seconds": 45.629,
+        "raw_log": "QA/Simulator-20261029T152839Z-test.log",
+        "xcresult": "QA/Simulator-20261029T152839Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testLargeTypeBulkActionsRemainSingleRowAndExitRestoresNavigation": {
+        "result": "passed",
+        "duration_seconds": 33.736,
+        "raw_log": "QA/Simulator-20261029T152839Z-test.log",
+        "xcresult": "QA/Simulator-20261029T152839Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testLateCoverRatiosDoNotMoveExistingCardsBetweenColumns": {
+        "result": "passed",
+        "duration_seconds": 28.203,
+        "raw_log": "QA/Simulator-20261029T152839Z-test.log",
+        "xcresult": "QA/Simulator-20261029T152839Z.xcresult",
+        "bundle_finalized": true
+      },
+      "ExViewerUITests.LibraryLayoutV36UITests testOfflineReaderDoesNotStackItsControlsOverMainTabs": {
+        "result": "passed",
+        "duration_seconds": 15.082,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      },
+      "ExViewerUITests.LibraryV10UITests testUnknownFavoriteResponseStopsProcessingAndOffersManualVerification": {
+        "result": "passed",
+        "duration_seconds": 21.843,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      }
+    },
+    "prior_failed_cases": [
+      {
+        "case": "ExViewerUITests.LibraryLayoutV36UITests testLateCoverRatiosDoNotMoveExistingCardsBetweenColumns",
+        "result": "failed",
+        "duration_seconds": 29.45,
+        "raw_log": "QA/Simulator-20261029T151840Z-test.log",
+        "xcresult": "QA/Simulator-20261029T151840Z.xcresult",
+        "bundle_finalized": false
+      }
+    ],
+    "prior_failure_evidence": "QA/library-layout36/first-ui-failure.json",
+    "comparison_threshold_unchanged": true,
+    "QA_only_timing_changed": "--qa-grid-aspect-delay8s to15s; actual card height observation replaces merged AX child wait",
+    "production_grid_logic_unchanged_across_UI_runs": true,
+    "completed_green_recheck": "QA/Simulator-20261029T152839Z.xcresult",
+    "core_package_tests_rerun": false
+  },
+  "release_build": {
+    "result": "SUCCEEDED",
+    "log": "QA/library-layout36/release36-build.log"
+  },
+  "viewed_screenshots": [
+    {
+      "path": "QA/library-layout36/all-attachments/44D35317-7044-4F93-8F7B-63FDD3DED0C9.png",
+      "name": "library36_0_36A4CD42-D447-48B1-8D59-06A580E1E938.bulk-actions",
+      "sha256": "a45e794ea4dd0936483cc320643a5b2783aa48b039744f4c11c470f579d3afb8",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library-layout36/all-attachments/EB62C62A-822B-42B4-8859-4D76EA21DFA6.png",
+      "name": "library36_0_5A88AF4C-233E-4D5D-BA43-AA76C81B2850.large-type-actions",
+      "sha256": "1ad1cc23337ddd4c26d7ddbb39440010efca192dd2c5e9b04403b8c2cdfaa2d3",
+      "visually_inspected": true
+    },
+    {
+      "path": "QA/library-layout36/all-attachments/A106DF32-C060-4E0E-877D-4A7C4676E05F.png",
+      "name": "library36_0_9061D47D-8087-48E8-9A2D-9B6C2BEB7863.stable-columns-after-covers",
+      "sha256": "42736f43a5dfc1d6fff76b67b32347620a721779fbfee98cffd530e6bf08fead",
+      "visually_inspected": true
+    }
+  ],
+  "physical_UI_acceptance": "NOT_EXERCISED",
+  "real_account_mutations_attempted": false,
+  "pushed_or_published": false
+}

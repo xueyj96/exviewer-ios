@@ -5,6 +5,7 @@ struct DiscoverView: View {
     @Binding var query: SearchQuery
     @Binding var site: GallerySite
     @Binding var editingSaved: UUID?
+    var onSearchTag: (GalleryTag, GallerySite) -> Void
     var runRevision: UUID? = nil
 
     @EnvironmentObject private var session: SiteSession
@@ -12,14 +13,17 @@ struct DiscoverView: View {
     @StateObject private var navigation: DiscoveryNavigation
     @State private var started = false
     @State private var composing = false
-    @State private var savedManager = false
+    @State private var composerStart: SearchComposerStart = .main
+    @State private var historyShowing = false
     @State private var saving = false
     @State private var error: String?
     @State private var pendingEdit: SavedSearch?
     @State private var web: WebDestination?
 
-    init(query: Binding<SearchQuery>, site: Binding<GallerySite>, editingSaved: Binding<UUID?>, runRevision: UUID? = nil) {
+    init(query: Binding<SearchQuery>, site: Binding<GallerySite>, editingSaved: Binding<UUID?>, runRevision: UUID? = nil,
+         onSearchTag: @escaping (GalleryTag, GallerySite) -> Void = { _, _ in }) {
         _query = query; _site = site; _editingSaved = editingSaved; self.runRevision = runRevision
+        self.onSearchTag = onSearchTag
         _navigation = StateObject(wrappedValue: DiscoveryNavigation(query: query.wrappedValue, site: site.wrappedValue, lane: 0, savedID: editingSaved.wrappedValue))
     }
 
@@ -60,6 +64,15 @@ struct DiscoverView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $web) { OfficialWebView(destination: $0) }
+        .sheet(isPresented: $historyShowing) {
+            NavigationStack {
+                ReadingHistoryView().navigationDestination(for: Gallery.self) { gallery in
+                    GalleryDetailView(gallery: gallery) { tag, site in
+                        historyShowing = false; onSearchTag(tag, site)
+                    }
+                }
+            }
+        }
         .onChange(of: runRevision) { oldValue, newValue in
             guard oldValue != newValue else { return }
             do {
@@ -128,7 +141,7 @@ struct DiscoverView: View {
                     if navigation.canGoForward { Button("前进", systemImage: "chevron.right", action: goForward) }
                 }
             }
-            Button { pendingEdit = nil; composing = true } label: {
+            Button { pendingEdit = nil; composerStart = .main; composing = true } label: {
                 HStack(spacing: 9) {
                     Image(systemName: "magnifyingglass").font(.body).foregroundStyle(.secondary)
                     Text(hasActiveConditions ? searchSummary(entry.query, site: entry.site) : "关键词、标签与条件")
@@ -140,7 +153,7 @@ struct DiscoverView: View {
             .accessibilityLabel(hasActiveConditions ? "编辑搜索条件" : "搜索关键词、标签与条件")
             .accessibilityIdentifier("discover.search-entry")
             Divider().frame(height: 18)
-            Button { pendingEdit = nil; composing = true } label: {
+            Button { pendingEdit = nil; composerStart = .filters; composing = true } label: {
                 Image(systemName: "slider.horizontal.3").font(.body)
                     .frame(width: 44, height: 44).contentShape(Rectangle())
                     .overlay(alignment: .topTrailing) {
@@ -152,6 +165,9 @@ struct DiscoverView: View {
             }.buttonStyle(.plain)
             .accessibilityLabel("搜索筛选条件")
             .accessibilityIdentifier("discover.filters")
+            Button { historyShowing = true } label: {
+                Image(systemName: "clock").font(.body).frame(width: 44, height: 44).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityLabel("阅读历史").accessibilityIdentifier("discover.history")
         }
         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
         .padding(.vertical, 2)
@@ -163,24 +179,22 @@ struct DiscoverView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(library.snapshot.saved) { saved in
-                        Button { apply(saved) } label: {
+                        Button { edit(saved) } label: {
                             Text(saved.name).font(.caption.weight(entry.savedID == saved.id ? .semibold : .regular))
                                 .lineLimit(1).padding(.horizontal, 11).padding(.vertical, 7)
                                 .background(entry.savedID == saved.id ? Color.accentColor.opacity(0.13) : Color.primary.opacity(0.035), in: Capsule())
                                 .frame(minHeight: 44)
                         }
-                        .buttonStyle(.plain).accessibilityLabel("载入并执行组合：\(saved.name)")
+                        .buttonStyle(.plain).accessibilityLabel("载入组合编辑：\(saved.name)")
+                            .accessibilityIdentifier("discover.preset.\(saved.id)")
                     }
                 }
             }
             .accessibilityIdentifier("discover.saved-shortcuts")
-            Button { savedManager = true } label: { Text("全部").frame(minHeight: 44) }
+            Button { pendingEdit = nil; composerStart = .favorites; composing = true } label: { Text("全部").frame(minHeight: 44) }
                 .font(.caption.weight(.medium)).accessibilityIdentifier("discover.saved-menu")
         }
         .padding(.bottom, 2)
-        .sheet(isPresented: $savedManager, onDismiss: {
-            if pendingEdit != nil { composing = true }
-        }) { savedSearchesSheet }
     }
 
     private var ruleChips: some View {
@@ -208,11 +222,12 @@ struct DiscoverView: View {
     }
 
     private var composerSheet: some View {
-        let saved = pendingEdit
+        let saved = pendingEdit ?? entry.savedID.flatMap { id in library.snapshot.saved.first { $0.id == id } }
         let initialQuery = saved?.query ?? entry.query
         let initialSite = saved?.site ?? entry.site
         let initialSavedID = saved?.id ?? entry.savedID
-        return DiscoveryComposerView(query: initialQuery, site: initialSite, savedID: initialSavedID) { query, site, savedID in
+        return DiscoveryComposerView(query: initialQuery, site: initialSite, savedID: initialSavedID,
+                                     startAt: composerStart, loadedPreset: saved) { query, site, savedID in
             _ = try navigation.submit(query: query, site: site, lane: entry.lane, savedID: savedID, session: session, qa: AppMode.qa)
             started = true
             publish(navigation.current)
@@ -233,28 +248,6 @@ struct DiscoverView: View {
         }
     }
 
-    private var savedSearchesSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(library.snapshot.saved) { saved in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(saved.name).font(.headline)
-                        Text(searchSummary(saved.query, site: saved.site)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        HStack {
-                            Button("使用") { apply(saved); savedManager = false }
-                            Button("载入编辑") { pendingEdit = saved; savedManager = false }
-                            Spacer()
-                            Button("删除", role: .destructive) { library.deleteSearch(saved.id) }
-                        }.font(.subheadline).buttonStyle(.borderless)
-                    }.padding(.vertical, 5)
-                }
-            }
-            .navigationTitle("常用组合").navigationBarTitleDisplayMode(.inline).appNavigationChrome()
-            .toolbar { AppToolbarItem(placement: .confirmationAction, tone: .accent) { Button("完成") { savedManager = false } } }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
     private func startCurrent() {
         do {
             let isFirstExecution = !entry.didStart
@@ -272,9 +265,8 @@ struct DiscoverView: View {
         } catch { self.error = message(for: error) }
     }
 
-    private func apply(_ saved: SavedSearch) {
-        pendingEdit = nil
-        submit(saved.query, site: saved.site, lane: entry.lane, savedID: saved.id)
+    private func edit(_ saved: SavedSearch) {
+        pendingEdit = saved; composerStart = .main; composing = true
     }
 
     private func goBack() {
@@ -388,9 +380,10 @@ private struct DiscoveryFeedView: View {
                 if pager.interrupted {
                     StatusMessage(title: "已暂停之前的加载，可重试继续。") { pager.retry(session: session) }
                 }
-                GalleryRows(galleries: pager.items, layout: .grid, onNearEnd: { if !restoring && isCurrent() && pager.failure == nil && !pager.interrupted { pager.more(session: session, prefetch: true) } },
+                GalleryRows(galleries: pager.items, layout: .grid, sourceIdentity: entry.id.uuidString,
+                            onNearEnd: { if !restoring && isCurrent() && pager.failure == nil && !pager.interrupted { pager.more(session: session, prefetch: true) } },
                             viewport: .init(space: entry.id.uuidString, height: viewport.size.height, topOcclusion: topInset),
-                            onVisibleAnchor: { if !restoring && isCurrent() { entry.scrollAnchor = $0 } })
+                            onVisibleAnchor: { if !restoring && isCurrent() { entry.updateVisibleAnchor($0) } })
                     .scrollTargetLayout()
                 GalleryContinuationFooter(pager: pager)
                 if !pager.loading && pager.failure == nil && pager.items.isEmpty && !pager.interrupted {
@@ -405,9 +398,12 @@ private struct DiscoveryFeedView: View {
         .contentMargins(.top, topInset, for: .scrollIndicators)
         .task(id: topInset) {
             restoring = true
-            if let anchor = entry.scrollAnchor {
-                await Task.yield()
-                guard !Task.isCancelled, isCurrent() else { return }
+            // A new feed must finish its initial placement before viewport
+            // callbacks can save anchors or request another batch.
+            let anchor = entry.scrollAnchor ?? entry.pager.items.first?.id
+            await Task.yield()
+            guard !Task.isCancelled, isCurrent() else { return }
+            if let anchor {
                 let viewport = GalleryFeedViewport(space: entry.id.uuidString, height: viewport.size.height, topOcclusion: topInset)
                 let target = GalleryFeedViewport.restorationID(for: anchor)
                 proxy.scrollTo(target, anchor: viewport.restorationAlignment)
